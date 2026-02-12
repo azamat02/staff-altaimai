@@ -1,0 +1,226 @@
+# Staff AltaimAI
+
+Платформа для управления KPI и оценки сотрудников.
+
+## Технологии
+
+- **Frontend**: React + TypeScript + Vite + Tailwind CSS
+- **Backend**: Node.js + Express + TypeScript + Prisma
+- **Database**: PostgreSQL
+
+---
+
+## Быстрый старт с Docker
+
+### Требования
+- Docker
+- Docker Compose
+
+### Запуск
+
+1. Клонируйте репозиторий:
+```bash
+git clone <repo-url>
+cd staff-altaimai
+```
+
+2. Создайте файл `.env` (опционально):
+```bash
+cp .env.example .env
+# Отредактируйте .env при необходимости
+```
+
+3. Запустите все сервисы:
+```bash
+# Сборка и запуск
+docker-compose up -d --build
+
+# Или через Makefile
+make up-build
+```
+
+4. Откройте в браузере:
+- **Frontend**: http://localhost
+- **Backend API**: http://localhost:3001/api
+
+### Учётные данные по умолчанию
+
+**Администратор:**
+- Логин: `admin`
+- Пароль: `admin123`
+
+**Пользователи** (для входа через портал):
+- Используйте username из базы данных
+- Пароли такие же как username (например: `bibosinova` / `bibosinova`)
+
+---
+
+## Команды управления (Makefile)
+
+```bash
+# Запуск
+make up              # Запустить контейнеры
+make up-build        # Пересобрать и запустить
+
+# Остановка
+make down            # Остановить контейнеры
+make clean           # Остановить и удалить volumes
+
+# Логи
+make logs            # Все логи
+make logs-backend    # Логи backend
+make logs-frontend   # Логи frontend
+make logs-db         # Логи базы данных
+
+# Shell доступ
+make db-shell        # PostgreSQL shell
+make backend-shell   # Backend container shell
+
+# Пересборка
+make rebuild-backend   # Пересобрать backend
+make rebuild-frontend  # Пересобрать frontend
+```
+
+---
+
+## Структура проекта
+
+```
+staff-altaimai/
+├── backend/
+│   ├── src/
+│   │   ├── controllers/
+│   │   ├── middleware/
+│   │   ├── routes/
+│   │   └── index.ts
+│   ├── prisma/
+│   │   └── schema.prisma
+│   ├── Dockerfile
+│   ├── docker-entrypoint.sh
+│   └── package.json
+├── frontend/
+│   ├── src/
+│   │   ├── components/
+│   │   ├── pages/
+│   │   └── services/
+│   ├── Dockerfile
+│   ├── nginx.conf
+│   └── package.json
+├── docker/
+│   └── init-db/
+│       └── seed-data.sql
+├── docker-compose.yml
+├── Makefile
+├── .env.example
+└── README.md
+```
+
+---
+
+## Переменные окружения
+
+| Переменная | Описание | По умолчанию |
+|------------|----------|--------------|
+| `DB_USER` | Пользователь PostgreSQL | `staff_user` |
+| `DB_PASSWORD` | Пароль PostgreSQL | `staff_password` |
+| `DB_NAME` | Имя базы данных | `staff_altaimai` |
+| `JWT_SECRET` | Секрет для JWT токенов | `your-super-secret...` |
+| `VITE_API_URL` | URL API для frontend | `http://localhost:3001/api` |
+
+---
+
+## Деплой на продакшн сервер
+
+1. Клонируйте проект на сервер:
+```bash
+git clone <repo-url>
+cd staff-altaimai
+```
+
+2. **ВАЖНО:** Создайте `.env` файл с вашим IP/доменом:
+```bash
+# Замените 123.45.67.89 на IP вашего сервера
+cat > .env << 'EOF'
+DB_USER=staff_user
+DB_PASSWORD=your_secure_password_here
+DB_NAME=staff_altaimai
+JWT_SECRET=your-random-secret-key-32-chars
+VITE_API_URL=http://123.45.67.89:3001/api
+EOF
+```
+
+Пример для сервера с IP `134.209.226.207`:
+```bash
+VITE_API_URL=http://134.209.226.207:3001/api
+```
+
+3. Запустите (первый раз с `--build`):
+```bash
+docker-compose up -d --build
+```
+
+4. Откройте в браузере:
+- **Frontend**: http://ВАШ_IP
+- **Backend API**: http://ВАШ_IP:3001/api
+
+5. Для HTTPS настройте reverse proxy (nginx/traefik).
+
+**Если изменили VITE_API_URL** — нужно пересобрать frontend:
+```bash
+docker-compose down
+docker-compose up -d --build
+```
+
+---
+
+## Разработка (без Docker)
+
+### Требования
+- Node.js 20+
+- PostgreSQL 15+
+
+### Backend
+```bash
+cd backend
+npm install
+# Создайте .env файл с DATABASE_URL
+npx prisma migrate dev
+npm run dev
+```
+
+### Frontend
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Откройте:
+- Frontend: http://localhost:5173
+- Backend: http://localhost:3001
+
+---
+
+## API Endpoints
+
+### Авторизация
+- `POST /api/auth/login` - Вход админа
+- `POST /api/user-auth/login` - Вход пользователя
+- `GET /api/auth/me` - Текущий админ
+
+### Пользователи
+- `GET /api/users` - Список пользователей
+- `POST /api/users` - Создать пользователя
+- `PUT /api/users/:id` - Обновить
+- `DELETE /api/users/:id` - Удалить
+
+### KPI
+- `GET /api/kpis` - Список KPI
+- `POST /api/kpis` - Создать KPI
+- `POST /api/kpis/:id/blocks` - Добавить блок
+- `POST /api/kpis/:id/blocks/:blockId/tasks` - Добавить показатель
+- `POST /api/kpis/:id/submit` - Отправить на согласование
+
+### Оценка
+- `GET /api/evaluation/periods` - Периоды оценки
+- `POST /api/evaluation/submit` - Отправить оценку

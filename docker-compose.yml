@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    container_name: staff-altaimai-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-staff_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-staff_password}
+      POSTGRES_DB: ${DB_NAME:-staff_altaimai}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-staff_user} -d ${DB_NAME:-staff_altaimai}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: staff-altaimai-backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://${DB_USER:-staff_user}:${DB_PASSWORD:-staff_password}@db:5432/${DB_NAME:-staff_altaimai}?schema=public
+      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
+      PORT: 3001
+      NODE_ENV: production
+      DB_USER: ${DB_USER:-staff_user}
+      DB_PASSWORD: ${DB_PASSWORD:-staff_password}
+      DB_NAME: ${DB_NAME:-staff_altaimai}
+    ports:
+      - "3001:3001"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./docker/init-db/seed-data.sql:/app/seed-data.sql:ro
+
+  # Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:3001/api}
+    container_name: staff-altaimai-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
