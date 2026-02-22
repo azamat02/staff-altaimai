@@ -4,7 +4,6 @@ import {
   groupScoresApi,
   evaluationPeriodsApi,
   GroupScoreResult,
-  GroupScoreEmployee,
   EvaluationPeriod,
 } from '../services/api';
 
@@ -32,18 +31,16 @@ const RefreshIcon = () => (
   </svg>
 );
 
-const CloseIcon = () => (
-  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-  </svg>
-);
+const scoreToPercent = (score: number | null): number | null =>
+  score !== null ? Math.round(score / 5 * 100) : null;
 
-// Get score color class based on score value
+// Get score color class based on percentage value
 const getScoreColorClass = (score: number | null): string => {
   if (score === null) return 'bg-slate-100 text-slate-500';
-  if (score >= 4.5) return 'bg-green-100 text-green-700';
-  if (score >= 3.5) return 'bg-blue-100 text-blue-700';
-  if (score >= 2.5) return 'bg-yellow-100 text-yellow-700';
+  const pct = scoreToPercent(score)!;
+  if (pct >= 90) return 'bg-green-100 text-green-700';
+  if (pct >= 70) return 'bg-blue-100 text-blue-700';
+  if (pct >= 50) return 'bg-yellow-100 text-yellow-700';
   return 'bg-red-100 text-red-700';
 };
 
@@ -51,7 +48,6 @@ interface GroupTreeNodeProps {
   group: GroupScoreResult;
   level: number;
   periodId: number | null;
-  onShowDetails: (groupId: number) => void;
 }
 
 const BlockIcon = () => (
@@ -60,19 +56,22 @@ const BlockIcon = () => (
   </svg>
 );
 
-const GroupTreeNode: React.FC<GroupTreeNodeProps> = ({ group, level, onShowDetails }) => {
+const GroupTreeNode: React.FC<GroupTreeNodeProps> = ({ group, level }) => {
   const [isExpanded, setIsExpanded] = useState(level === 0);
   const hasChildren = group.children.length > 0;
   const isBlock = group.type === 'block';
+  const pct = scoreToPercent(group.score);
 
   return (
     <div>
       <div
-        className={`flex items-center justify-between py-3 px-4 hover:bg-slate-50 cursor-pointer border-b border-slate-100 ${
+        className={`flex items-center justify-between py-3 px-4 hover:bg-slate-50 ${
+          hasChildren ? 'cursor-pointer' : ''
+        } border-b border-slate-100 ${
           isBlock ? 'bg-gold-50/50' : level === 0 ? 'bg-slate-50' : ''
         }`}
         style={{ paddingLeft: `${1 + level * 1.5}rem` }}
-        onClick={() => hasChildren ? setIsExpanded(!isExpanded) : (!isBlock && onShowDetails(group.groupId))}
+        onClick={() => hasChildren && setIsExpanded(!isExpanded)}
       >
         <div className="flex items-center space-x-3">
           {hasChildren ? (
@@ -93,9 +92,6 @@ const GroupTreeNode: React.FC<GroupTreeNodeProps> = ({ group, level, onShowDetai
               {isBlock && <BlockIcon />}
               <span>{group.groupName}</span>
             </div>
-            {!isBlock && group.leaderName && (
-              <div className="text-sm text-slate-500">Руководитель: {group.leaderName}</div>
-            )}
           </div>
         </div>
 
@@ -106,20 +102,8 @@ const GroupTreeNode: React.FC<GroupTreeNodeProps> = ({ group, level, onShowDetai
           <div
             className={`px-3 py-1 rounded-full text-sm font-medium ${getScoreColorClass(group.score)}`}
           >
-            {group.score !== null ? group.score.toFixed(2) : '—'}
+            {pct !== null ? `${pct}%` : '—'}
           </div>
-          {!isBlock && group.isLeaf && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onShowDetails(group.groupId);
-              }}
-              className="p-2 hover:bg-slate-200 rounded-lg transition-colors text-slate-500"
-              title="Показать сотрудников"
-            >
-              <UsersIcon />
-            </button>
-          )}
         </div>
       </div>
 
@@ -131,137 +115,10 @@ const GroupTreeNode: React.FC<GroupTreeNodeProps> = ({ group, level, onShowDetai
               group={child}
               level={level + 1}
               periodId={null}
-              onShowDetails={onShowDetails}
             />
           ))}
         </div>
       )}
-    </div>
-  );
-};
-
-interface EmployeeDetailsModalProps {
-  groupId: number;
-  periodId: number | null;
-  onClose: () => void;
-}
-
-const EmployeeDetailsModal: React.FC<EmployeeDetailsModalProps> = ({ groupId, periodId, onClose }) => {
-  const [isLoading, setIsLoading] = useState(true);
-  const [groupInfo, setGroupInfo] = useState<{
-    id: number;
-    name: string;
-    leader: { id: number; fullName: string; position: string } | null;
-    score: number | null;
-    evaluatedCount: number;
-    totalCount: number;
-  } | null>(null);
-  const [employees, setEmployees] = useState<GroupScoreEmployee[]>([]);
-
-  useEffect(() => {
-    const loadDetails = async () => {
-      try {
-        const response = await groupScoresApi.getDetails(groupId, periodId || undefined);
-        setGroupInfo(response.data.group);
-        setEmployees(response.data.employees);
-      } catch (error) {
-        console.error('Failed to load group details:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    loadDetails();
-  }, [groupId, periodId]);
-
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl mx-4 max-h-[80vh] flex flex-col">
-        <div className="flex items-center justify-between p-6 border-b border-slate-100">
-          <div>
-            <h3 className="text-lg font-semibold text-slate-900">
-              {groupInfo?.name || 'Загрузка...'}
-            </h3>
-            {groupInfo?.leader && (
-              <p className="text-sm text-slate-500 mt-1">
-                Руководитель: {groupInfo.leader.fullName}
-              </p>
-            )}
-          </div>
-          <div className="flex items-center space-x-4">
-            {groupInfo && (
-              <div className="text-right">
-                <div className={`px-3 py-1 rounded-full text-sm font-medium inline-block ${getScoreColorClass(groupInfo.score)}`}>
-                  {groupInfo.score !== null ? groupInfo.score.toFixed(2) : '—'}
-                </div>
-                <div className="text-xs text-slate-500 mt-1">
-                  {groupInfo.evaluatedCount} из {groupInfo.totalCount} оценено
-                </div>
-              </div>
-            )}
-            <button
-              onClick={onClose}
-              className="p-1 hover:bg-slate-100 rounded-lg transition-colors"
-            >
-              <CloseIcon />
-            </button>
-          </div>
-        </div>
-
-        <div className="flex-1 overflow-y-auto p-6">
-          {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="w-8 h-8 border-2 border-slate-200 border-t-gold-500 rounded-full animate-spin" />
-            </div>
-          ) : employees.length === 0 ? (
-            <div className="text-center py-12 text-slate-500">
-              Нет сотрудников в этой группе
-            </div>
-          ) : (
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-slate-100">
-                  <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3">
-                    Сотрудник
-                  </th>
-                  <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3">
-                    Должность
-                  </th>
-                  <th className="text-center text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3">
-                    Оценка
-                  </th>
-                  <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3">
-                    Результат
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {employees.map((emp) => (
-                  <tr key={emp.id} className="hover:bg-slate-50">
-                    <td className="px-4 py-3 font-medium text-slate-900">
-                      {emp.fullName}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-slate-500">
-                      {emp.position}
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      {emp.evaluation ? (
-                        <span className={`px-2 py-1 rounded-full text-sm font-medium ${getScoreColorClass(emp.evaluation.averageScore)}`}>
-                          {emp.evaluation.averageScore.toFixed(2)}
-                        </span>
-                      ) : (
-                        <span className="text-slate-400">—</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-slate-600">
-                      {emp.evaluation?.result || '—'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      </div>
     </div>
   );
 };
@@ -273,7 +130,6 @@ const GroupScoresPage: React.FC = () => {
   const [currentPeriod, setCurrentPeriod] = useState<EvaluationPeriod | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isCalculating, setIsCalculating] = useState(false);
-  const [detailsGroupId, setDetailsGroupId] = useState<number | null>(null);
 
   // Load periods
   useEffect(() => {
@@ -368,19 +224,19 @@ const GroupScoresPage: React.FC = () => {
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2">
               <div className="w-3 h-3 rounded-full bg-green-500" />
-              <span className="text-slate-600">4.5+ Эффективно</span>
+              <span className="text-slate-600">90%+ Эфф.</span>
             </div>
             <div className="flex items-center space-x-2">
               <div className="w-3 h-3 rounded-full bg-blue-500" />
-              <span className="text-slate-600">3.5-4.5 Надлежаще</span>
+              <span className="text-slate-600">70-90% Надл.</span>
             </div>
             <div className="flex items-center space-x-2">
               <div className="w-3 h-3 rounded-full bg-yellow-500" />
-              <span className="text-slate-600">2.5-3.5 Удовл.</span>
+              <span className="text-slate-600">50-70% Удовл.</span>
             </div>
             <div className="flex items-center space-x-2">
               <div className="w-3 h-3 rounded-full bg-red-500" />
-              <span className="text-slate-600">&lt;2.5 Неудовл.</span>
+              <span className="text-slate-600">&lt;50% Неудовл.</span>
             </div>
           </div>
         </div>
@@ -416,22 +272,12 @@ const GroupScoresPage: React.FC = () => {
                   group={group}
                   level={0}
                   periodId={selectedPeriodId}
-                  onShowDetails={setDetailsGroupId}
                 />
               ))}
             </div>
           )}
         </div>
       </div>
-
-      {/* Employee Details Modal */}
-      {detailsGroupId !== null && (
-        <EmployeeDetailsModal
-          groupId={detailsGroupId}
-          periodId={selectedPeriodId}
-          onClose={() => setDetailsGroupId(null)}
-        />
-      )}
     </Layout>
   );
 };

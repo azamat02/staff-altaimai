@@ -312,32 +312,6 @@ export interface GroupScoresResponse {
   groups: GroupScoreResult[];
 }
 
-export interface GroupScoreEmployee {
-  id: number;
-  fullName: string;
-  position: string;
-  evaluation: {
-    id: number;
-    averageScore: number;
-    result: string;
-    formType: FormType;
-    scores: EvaluationScores;
-  } | null;
-}
-
-export interface GroupScoreDetailsResponse {
-  period: EvaluationPeriod | null;
-  group: {
-    id: number;
-    name: string;
-    leader: { id: number; fullName: string; position: string } | null;
-    score: number | null;
-    evaluatedCount: number;
-    totalCount: number;
-  } | null;
-  employees: GroupScoreEmployee[];
-}
-
 export interface CalculateGroupScoresResponse {
   message: string;
   count: number;
@@ -382,8 +356,6 @@ export interface GroupScoresSummaryResponse {
 export const groupScoresApi = {
   getAll: (periodId?: number) =>
     api.get<GroupScoresResponse>('/group-scores', { params: periodId ? { periodId } : {} }),
-  getDetails: (groupId: number, periodId?: number) =>
-    api.get<GroupScoreDetailsResponse>(`/group-scores/${groupId}`, { params: periodId ? { periodId } : {} }),
   calculate: (periodId: number) =>
     api.post<CalculateGroupScoresResponse>('/group-scores/calculate', { periodId }),
   getSummary: (periodId?: number) =>
