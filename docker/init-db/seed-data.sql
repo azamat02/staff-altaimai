@@ -3,8 +3,8 @@
 SET session_replication_role = 'replica';
 
 -- Admin (password: admin123)
-INSERT INTO "Admin" (id, username, "passwordHash", "createdAt") VALUES
-(1, 'admin', '$2b$10$pISqReMiLH/Uz/aVKWZHheELRkCx/ppSa9SPeyNacmD95.L29g/4K', '2026-01-30 15:20:20.091')
+INSERT INTO "Admin" (id, username, "passwordHash", role, "createdAt") VALUES
+(1, 'admin', '$2b$10$pISqReMiLH/Uz/aVKWZHheELRkCx/ppSa9SPeyNacmD95.L29g/4K', 'SUPER_ADMIN', '2026-01-30 15:20:20.091')
 ON CONFLICT (id) DO NOTHING;
 
 -- EvaluationPeriod

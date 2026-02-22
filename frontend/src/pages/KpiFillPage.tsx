@@ -207,15 +207,15 @@ const KpiFillPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-slate-200 border-t-slate-900 rounded-full animate-spin" />
+      <div className="min-h-screen bg-brand-light flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-slate-200 border-t-gold-500 rounded-full animate-spin" />
       </div>
     );
   }
 
   if (!assignment) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="min-h-screen bg-brand-light flex items-center justify-center">
         <div className="text-center">
           <p className="text-slate-600 mb-4">KPI не найден</p>
           <button onClick={() => navigate('/portal')} className="btn-primary">
@@ -230,7 +230,7 @@ const KpiFillPage: React.FC = () => {
   const overallScore = getOverallScore();
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-brand-light">
       {/* Header */}
       <div className="bg-white border-b border-slate-200 sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-6 py-4">
@@ -298,14 +298,14 @@ const KpiFillPage: React.FC = () => {
                 <p className="text-xs text-slate-500">Заполнено</p>
               </div>
               <div className="text-center">
-                <p className="text-2xl font-bold text-blue-600">{overallScore}%</p>
+                <p className="text-2xl font-bold text-gold-600">{overallScore}%</p>
                 <p className="text-xs text-slate-500">Итоговый балл</p>
               </div>
             </div>
           </div>
           <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
             <div
-              className="h-full bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-300"
+              className="h-full bg-gradient-to-r from-gold-500 to-gold-600 transition-all duration-300"
               style={{ width: `${overallProgress}%` }}
             />
           </div>
@@ -347,7 +347,7 @@ const KpiFillPage: React.FC = () => {
                       <p className="text-xs text-slate-500">заполнено</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-medium text-blue-600">{blockScore}%</p>
+                      <p className="text-sm font-medium text-gold-600">{blockScore}%</p>
                       <p className="text-xs text-slate-500">балл</p>
                     </div>
                     <div className="w-24">
@@ -390,7 +390,7 @@ const KpiFillPage: React.FC = () => {
                                 <span className="text-xs px-2 py-0.5 bg-slate-100 text-slate-600 rounded">
                                   Вес: {task.weight}%
                                 </span>
-                                <span className="text-xs px-2 py-0.5 bg-blue-50 text-blue-600 rounded">
+                                <span className="text-xs px-2 py-0.5 bg-gold-50 text-gold-600 rounded">
                                   План: {planValue} {unit}
                                 </span>
                               </div>

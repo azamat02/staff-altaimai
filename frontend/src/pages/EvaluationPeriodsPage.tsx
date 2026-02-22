@@ -122,7 +122,7 @@ const PeriodForm: React.FC<PeriodFormProps> = ({ period, onSave, onCancel, isLoa
               id="isActive"
               checked={isActive}
               onChange={(e) => setIsActive(e.target.checked)}
-              className="w-4 h-4 text-slate-900 border-slate-300 rounded focus:ring-slate-500"
+              className="w-4 h-4 text-gold-500 border-slate-300 rounded focus:ring-gold-500"
             />
             <label htmlFor="isActive" className="text-sm text-slate-700">
               Период активен (доступен для оценки)
@@ -234,7 +234,7 @@ const EvaluationPeriodsPage: React.FC = () => {
         <div className="card">
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
-              <div className="w-8 h-8 border-2 border-slate-200 border-t-slate-900 rounded-full animate-spin" />
+              <div className="w-8 h-8 border-2 border-slate-200 border-t-gold-500 rounded-full animate-spin" />
             </div>
           ) : periods.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12">

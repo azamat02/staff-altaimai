@@ -2,67 +2,13 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import prisma from '../config/database';
 import { AuthRequest } from '../middleware/authMiddleware';
-
-// Генерация пароля (12 символов: буквы + цифры + спецсимволы)
-function generatePassword(): string {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#$%!';
-  let password = '';
-  for (let i = 0; i < 12; i++) {
-    password += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return password;
-}
-
-// Транслитерация кириллицы в латиницу
-function transliterate(text: string): string {
-  const map: { [key: string]: string } = {
-    'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'e',
-    'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm',
-    'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u',
-    'ф': 'f', 'х': 'kh', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'shch',
-    'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya',
-    // Казахские буквы
-    'ә': 'a', 'ғ': 'g', 'қ': 'q', 'ң': 'n', 'ө': 'o', 'ұ': 'u', 'ү': 'u', 'һ': 'h', 'і': 'i',
-  };
-
-  return text
-    .toLowerCase()
-    .split('')
-    .map(char => map[char] || char)
-    .join('')
-    .replace(/[^a-z0-9]/g, '');
-}
-
-// Генерация логина из ФИО (фамилия + первая буква имени)
-async function generateLogin(fullName: string): Promise<string> {
-  const parts = fullName.trim().split(/\s+/);
-  let baseLogin = '';
-
-  if (parts.length >= 2) {
-    // Фамилия + первая буква имени
-    const surname = transliterate(parts[0]);
-    const firstNameInitial = transliterate(parts[1].charAt(0));
-    baseLogin = surname + firstNameInitial;
-  } else {
-    baseLogin = transliterate(parts[0]);
-  }
-
-  // Проверка уникальности и добавление номера если нужно
-  let login = baseLogin;
-  let counter = 1;
-
-  while (await prisma.user.findUnique({ where: { login } })) {
-    login = `${baseLogin}${counter}`;
-    counter++;
-  }
-
-  return login;
-}
+import { generatePassword, generateLogin } from '../utils/helpers';
+import { sendCredentialsEmail, sendPasswordResetEmail } from '../utils/mailer';
 
 // Рекурсивное получение всех подчиненных
 async function getSubordinatesTree(userId: number): Promise<any[]> {
   const direct = await prisma.user.findMany({
-    where: { managerId: userId },
+    where: { managerId: userId, approvalStatus: 'APPROVED' },
     include: {
       group: true,
     },
@@ -78,6 +24,7 @@ async function getSubordinatesTree(userId: number): Promise<any[]> {
 export const getUsers = async (req: Request, res: Response) => {
   try {
     const users = await prisma.user.findMany({
+      where: { approvalStatus: 'APPROVED' },
       include: {
         group: {
           include: {
@@ -116,7 +63,7 @@ export const getUsers = async (req: Request, res: Response) => {
     res.json(users);
   } catch (error) {
     console.error('Get users error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 };
 
@@ -161,23 +108,24 @@ export const getUser = async (req: Request, res: Response) => {
     });
 
     if (!user) {
-      return res.status(404).json({ error: 'User not found' });
+      return res.status(404).json({ error: 'Пользователь не найден' });
     }
 
     res.json(user);
   } catch (error) {
     console.error('Get user error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 };
 
-export const createUser = async (req: Request, res: Response) => {
+export const createUser = async (req: AuthRequest, res: Response) => {
   try {
     const {
       fullName,
       position,
       groupId,
       managerId,
+      email,
       submitsBasicReport = false,
       submitsKpi = false,
       canAccessPlatform = false,
@@ -185,7 +133,23 @@ export const createUser = async (req: Request, res: Response) => {
     } = req.body;
 
     if (!fullName || !position || !groupId) {
-      return res.status(400).json({ error: 'Full name, position, and group are required' });
+      return res.status(400).json({ error: 'ФИО, должность и группа обязательны' });
+    }
+
+    if (canAccessPlatform && !email) {
+      return res.status(400).json({ error: 'Email обязателен для пользователей с доступом к платформе' });
+    }
+
+    // Проверка уникальности email
+    if (email) {
+      const existingUserEmail = await prisma.user.findFirst({ where: { email } });
+      if (existingUserEmail) {
+        return res.status(400).json({ error: 'Пользователь с таким email уже существует' });
+      }
+      const existingAdminEmail = await prisma.admin.findFirst({ where: { email } });
+      if (existingAdminEmail) {
+        return res.status(400).json({ error: 'Этот email уже используется' });
+      }
     }
 
     const group = await prisma.group.findUnique({
@@ -193,7 +157,7 @@ export const createUser = async (req: Request, res: Response) => {
     });
 
     if (!group) {
-      return res.status(400).json({ error: 'Group not found' });
+      return res.status(400).json({ error: 'Группа не найдена' });
     }
 
     if (managerId) {
@@ -201,7 +165,7 @@ export const createUser = async (req: Request, res: Response) => {
         where: { id: managerId },
       });
       if (!manager) {
-        return res.status(400).json({ error: 'Manager not found' });
+        return res.status(400).json({ error: 'Руководитель не найден' });
       }
     }
 
@@ -216,17 +180,21 @@ export const createUser = async (req: Request, res: Response) => {
       passwordHash = await bcrypt.hash(plainPassword, 10);
     }
 
+    const authReq = req as AuthRequest;
     const user = await prisma.user.create({
       data: {
         fullName,
         position,
         groupId,
         managerId: managerId || null,
+        email: email || null,
         submitsBasicReport,
         submitsKpi,
         canAccessPlatform,
         login,
         passwordHash,
+        approvalStatus: 'APPROVED',
+        createdByAdminId: authReq.adminId || null,
       },
       include: {
         group: true,
@@ -242,6 +210,13 @@ export const createUser = async (req: Request, res: Response) => {
       });
     }
 
+    // Отправляем учётные данные на email если есть
+    if (plainPassword && login && email) {
+      sendCredentialsEmail(email, fullName, login, plainPassword).catch((err) =>
+        console.error('Failed to send credentials email:', err)
+      );
+    }
+
     // Возвращаем пользователя с сгенерированным логином и паролем (только при создании)
     res.status(201).json({
       ...user,
@@ -250,7 +225,7 @@ export const createUser = async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('Create user error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 };
 
@@ -262,6 +237,7 @@ export const updateUser = async (req: Request, res: Response) => {
       position,
       groupId,
       managerId,
+      email,
       submitsBasicReport,
       submitsKpi,
       canAccessPlatform,
@@ -274,7 +250,29 @@ export const updateUser = async (req: Request, res: Response) => {
     });
 
     if (!existingUser) {
-      return res.status(404).json({ error: 'User not found' });
+      return res.status(404).json({ error: 'Пользователь не найден' });
+    }
+
+    // Валидация email при включении canAccessPlatform
+    const effectiveCanAccessPlatform = canAccessPlatform ?? existingUser.canAccessPlatform;
+    const effectiveEmail = email !== undefined ? (email || null) : existingUser.email;
+
+    if (effectiveCanAccessPlatform && !effectiveEmail) {
+      return res.status(400).json({ error: 'Email обязателен для пользователей с доступом к платформе' });
+    }
+
+    // Проверка уникальности email (исключая текущего пользователя)
+    if (effectiveEmail) {
+      const existingUserEmail = await prisma.user.findFirst({
+        where: { email: effectiveEmail, id: { not: parseInt(id) } },
+      });
+      if (existingUserEmail) {
+        return res.status(400).json({ error: 'Пользователь с таким email уже существует' });
+      }
+      const existingAdminEmail = await prisma.admin.findFirst({ where: { email: effectiveEmail } });
+      if (existingAdminEmail) {
+        return res.status(400).json({ error: 'Этот email уже используется' });
+      }
     }
 
     const newGroupId = groupId || existingUser.groupId;
@@ -284,7 +282,7 @@ export const updateUser = async (req: Request, res: Response) => {
         where: { id: groupId },
       });
       if (!group) {
-        return res.status(400).json({ error: 'Group not found' });
+        return res.status(400).json({ error: 'Группа не найдена' });
       }
     }
 
@@ -298,13 +296,13 @@ export const updateUser = async (req: Request, res: Response) => {
 
     if (managerId) {
       if (managerId === parseInt(id)) {
-        return res.status(400).json({ error: 'User cannot be their own manager' });
+        return res.status(400).json({ error: 'Пользователь не может быть своим руководителем' });
       }
       const manager = await prisma.user.findUnique({
         where: { id: managerId },
       });
       if (!manager) {
-        return res.status(400).json({ error: 'Manager not found' });
+        return res.status(400).json({ error: 'Руководитель не найден' });
       }
     }
 
@@ -335,6 +333,7 @@ export const updateUser = async (req: Request, res: Response) => {
         submitsBasicReport: submitsBasicReport ?? existingUser.submitsBasicReport,
         submitsKpi: submitsKpi ?? existingUser.submitsKpi,
         canAccessPlatform: canAccessPlatform ?? existingUser.canAccessPlatform,
+        email: email !== undefined ? (email || null) : existingUser.email,
         login,
         passwordHash,
       },
@@ -352,6 +351,14 @@ export const updateUser = async (req: Request, res: Response) => {
       });
     }
 
+    // Отправляем учётные данные на email если были сгенерированы
+    const userEmail = email || existingUser.email;
+    if (plainPassword && login && userEmail) {
+      sendCredentialsEmail(userEmail, user.fullName, login, plainPassword).catch((err) =>
+        console.error('Failed to send credentials email:', err)
+      );
+    }
+
     // Возвращаем пользователя с сгенерированным логином и паролем (если были созданы)
     res.json({
       ...user,
@@ -360,7 +367,7 @@ export const updateUser = async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('Update user error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 };
 
@@ -374,7 +381,7 @@ export const deleteUser = async (req: Request, res: Response) => {
     });
 
     if (!existingUser) {
-      return res.status(404).json({ error: 'User not found' });
+      return res.status(404).json({ error: 'Пользователь не найден' });
     }
 
     // Если пользователь был начальником группы - очищаем leaderId
@@ -396,10 +403,10 @@ export const deleteUser = async (req: Request, res: Response) => {
       where: { id: parseInt(id) },
     });
 
-    res.json({ message: 'User deleted successfully' });
+    res.json({ message: 'Пользователь успешно удалён' });
   } catch (error) {
     console.error('Delete user error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 };
 
@@ -413,11 +420,11 @@ export const regeneratePassword = async (req: AuthRequest, res: Response) => {
     });
 
     if (!existingUser) {
-      return res.status(404).json({ error: 'User not found' });
+      return res.status(404).json({ error: 'Пользователь не найден' });
     }
 
     if (!existingUser.canAccessPlatform) {
-      return res.status(400).json({ error: 'User does not have platform access' });
+      return res.status(400).json({ error: 'У пользователя нет доступа к платформе' });
     }
 
     const plainPassword = generatePassword();
@@ -428,10 +435,17 @@ export const regeneratePassword = async (req: AuthRequest, res: Response) => {
       data: { passwordHash },
     });
 
+    // Отправляем новый пароль на email если есть
+    if (existingUser.email) {
+      sendPasswordResetEmail(existingUser.email, existingUser.fullName, existingUser.login || existingUser.email, plainPassword).catch((err) =>
+        console.error('Failed to send password reset email:', err)
+      );
+    }
+
     res.json({ generatedPassword: plainPassword });
   } catch (error) {
     console.error('Regenerate password error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 };
 
@@ -440,13 +454,13 @@ export const getUserSubordinatesTree = async (req: AuthRequest, res: Response) =
   try {
     const userId = req.userId;
     if (!userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      return res.status(401).json({ error: 'Не авторизован' });
     }
 
     const subordinates = await getSubordinatesTree(userId);
     res.json(subordinates);
   } catch (error) {
     console.error('Get subordinates tree error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 };

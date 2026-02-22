@@ -59,7 +59,7 @@ const DocumentIcon = () => (
 const getScoreColorClass = (score: number | null): string => {
   if (score === null) return 'bg-slate-100 text-slate-500';
   if (score >= 4.5) return 'bg-green-100 text-green-700';
-  if (score >= 3.5) return 'bg-blue-100 text-blue-700';
+  if (score >= 3.5) return 'bg-gold-100 text-gold-700';
   if (score >= 2.5) return 'bg-yellow-100 text-yellow-700';
   return 'bg-red-100 text-red-700';
 };
@@ -73,7 +73,7 @@ const getScoreCategory = (score: number | null): string => {
 };
 
 // Pie chart colors
-const PIE_COLORS = ['#22c55e', '#3b82f6', '#eab308', '#ef4444'];
+const PIE_COLORS = ['#22c55e', '#ceb275', '#eab308', '#ef4444'];
 
 interface StatCardProps {
   title: string;
@@ -87,7 +87,7 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, icon, subtitle, color
   const colorClasses = {
     default: 'bg-slate-100 text-slate-600',
     green: 'bg-green-100 text-green-600',
-    blue: 'bg-blue-100 text-blue-600',
+    blue: 'bg-gold-100 text-gold-600',
     yellow: 'bg-yellow-100 text-yellow-600',
     red: 'bg-red-100 text-red-600',
   };
@@ -358,7 +358,7 @@ const ScoringReportPage: React.FC = () => {
 
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
-            <div className="w-8 h-8 border-2 border-slate-200 border-t-slate-900 rounded-full animate-spin" />
+            <div className="w-8 h-8 border-2 border-slate-200 border-t-gold-500 rounded-full animate-spin" />
           </div>
         ) : (
           <>
@@ -428,7 +428,7 @@ const ScoringReportPage: React.FC = () => {
                       />
                       <Bar
                         dataKey="score"
-                        fill="#3b82f6"
+                        fill="#ceb275"
                         radius={[0, 4, 4, 0]}
                       />
                     </BarChart>

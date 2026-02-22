@@ -4,10 +4,10 @@ import { authApi, Admin, User } from '../services/api';
 interface AuthContextType {
   admin: Admin | null;
   user: User | null;
-  role: 'admin' | 'user' | null;
+  role: 'admin' | 'operator' | 'user' | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: (username: string, password: string) => Promise<'admin' | 'user'>;
+  login: (username: string, password: string) => Promise<'admin' | 'operator' | 'user'>;
   logout: () => void;
 }
 
@@ -28,7 +28,7 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [admin, setAdmin] = useState<Admin | null>(null);
   const [user, setUser] = useState<User | null>(null);
-  const [role, setRole] = useState<'admin' | 'user' | null>(null);
+  const [role, setRole] = useState<'admin' | 'operator' | 'user' | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -39,11 +39,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         .getMe()
         .then((response) => {
           const data = response.data;
-          setRole(data.role);
-          if (data.role === 'admin' && data.admin) {
-            setAdmin(data.admin);
+          const r = data.role as 'admin' | 'operator' | 'user';
+          setRole(r);
+          if ((r === 'admin' || r === 'operator') && data.admin) {
+            setAdmin({ ...data.admin, isSuperAdmin: data.admin.role === 'SUPER_ADMIN' });
             setUser(null);
-          } else if (data.role === 'user' && data.user) {
+          } else if (r === 'user' && data.user) {
             setUser(data.user);
             setAdmin(null);
           }
@@ -60,23 +61,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, []);
 
-  const login = async (username: string, password: string): Promise<'admin' | 'user'> => {
+  const login = async (username: string, password: string): Promise<'admin' | 'operator' | 'user'> => {
     const response = await authApi.login(username, password);
     const data = response.data;
 
     localStorage.setItem('token', data.token);
     localStorage.setItem('role', data.role);
-    setRole(data.role);
+    const r = data.role as 'admin' | 'operator' | 'user';
+    setRole(r);
 
-    if (data.role === 'admin' && data.admin) {
-      setAdmin(data.admin);
+    if ((r === 'admin' || r === 'operator') && data.admin) {
+      setAdmin({ ...data.admin, isSuperAdmin: data.admin.role === 'SUPER_ADMIN' });
       setUser(null);
-    } else if (data.role === 'user' && data.user) {
+    } else if (r === 'user' && data.user) {
       setUser(data.user);
       setAdmin(null);
     }
 
-    return data.role;
+    return r;
   };
 
   const logout = () => {

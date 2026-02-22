@@ -48,7 +48,7 @@ export const getAllKpis = async (req: AuthRequest, res: Response) => {
     res.json(kpis);
   } catch (error) {
     console.error('Get all KPIs error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 };
 
@@ -86,13 +86,13 @@ export const getKpi = async (req: AuthRequest, res: Response) => {
     });
 
     if (!kpi) {
-      return res.status(404).json({ error: 'KPI not found' });
+      return res.status(404).json({ error: 'KPI не найден' });
     }
 
     res.json(kpi);
   } catch (error) {
     console.error('Get KPI error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 };
 
@@ -101,13 +101,13 @@ export const createKpi = async (req: AuthRequest, res: Response) => {
   try {
     const adminId = req.adminId;
     if (!adminId) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      return res.status(401).json({ error: 'Не авторизован' });
     }
 
     const { title, description, deadline, approverId } = req.body;
 
     if (!title || !deadline || !approverId) {
-      return res.status(400).json({ error: 'Title, deadline, and approver are required' });
+      return res.status(400).json({ error: 'Название, срок и утверждающий обязательны' });
     }
 
     // Проверить, что approver существует
@@ -116,7 +116,7 @@ export const createKpi = async (req: AuthRequest, res: Response) => {
     });
 
     if (!approver) {
-      return res.status(404).json({ error: 'Approver not found' });
+      return res.status(404).json({ error: 'Утверждающий не найден' });
     }
 
     const kpi = await prisma.kpi.create({
@@ -146,7 +146,7 @@ export const createKpi = async (req: AuthRequest, res: Response) => {
     res.status(201).json(kpi);
   } catch (error) {
     console.error('Create KPI error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 };
 
@@ -161,11 +161,11 @@ export const updateKpi = async (req: AuthRequest, res: Response) => {
     });
 
     if (!kpi) {
-      return res.status(404).json({ error: 'KPI not found' });
+      return res.status(404).json({ error: 'KPI не найден' });
     }
 
     if (kpi.status !== 'DRAFT' && kpi.status !== 'REJECTED') {
-      return res.status(400).json({ error: 'Can only update KPI in DRAFT or REJECTED status' });
+      return res.status(400).json({ error: 'Можно редактировать KPI только в статусе Черновик или Отклонён' });
     }
 
     const updateData: any = {};
@@ -178,7 +178,7 @@ export const updateKpi = async (req: AuthRequest, res: Response) => {
         where: { id: approverId },
       });
       if (!approver) {
-        return res.status(404).json({ error: 'Approver not found' });
+        return res.status(404).json({ error: 'Утверждающий не найден' });
       }
       updateData.approverId = approverId;
     }
@@ -220,7 +220,7 @@ export const updateKpi = async (req: AuthRequest, res: Response) => {
     res.json(updatedKpi);
   } catch (error) {
     console.error('Update KPI error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 };
 
@@ -234,22 +234,22 @@ export const deleteKpi = async (req: AuthRequest, res: Response) => {
     });
 
     if (!kpi) {
-      return res.status(404).json({ error: 'KPI not found' });
+      return res.status(404).json({ error: 'KPI не найден' });
     }
 
     // Нельзя удалить KPI на согласовании или завершённый
     if (kpi.status === 'PENDING_APPROVAL' || kpi.status === 'COMPLETED') {
-      return res.status(400).json({ error: 'Cannot delete KPI in PENDING_APPROVAL or COMPLETED status' });
+      return res.status(400).json({ error: 'Нельзя удалить KPI в статусе На согласовании или Завершён' });
     }
 
     await prisma.kpi.delete({
       where: { id: parseInt(id) },
     });
 
-    res.json({ message: 'KPI deleted' });
+    res.json({ message: 'KPI удалён' });
   } catch (error) {
     console.error('Delete KPI error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 };
 
@@ -262,7 +262,7 @@ export const addBlock = async (req: AuthRequest, res: Response) => {
     const { name, weight } = req.body;
 
     if (!name || weight === undefined) {
-      return res.status(400).json({ error: 'Name and weight are required' });
+      return res.status(400).json({ error: 'Название и вес обязательны' });
     }
 
     const kpi = await prisma.kpi.findUnique({
@@ -271,11 +271,11 @@ export const addBlock = async (req: AuthRequest, res: Response) => {
     });
 
     if (!kpi) {
-      return res.status(404).json({ error: 'KPI not found' });
+      return res.status(404).json({ error: 'KPI не найден' });
     }
 
     if (kpi.status !== 'DRAFT' && kpi.status !== 'REJECTED') {
-      return res.status(400).json({ error: 'Can only add blocks to KPI in DRAFT or REJECTED status' });
+      return res.status(400).json({ error: 'Можно добавлять блоки только в KPI в статусе Черновик или Отклонён' });
     }
 
     // Определить порядок для нового блока
@@ -296,7 +296,7 @@ export const addBlock = async (req: AuthRequest, res: Response) => {
     res.status(201).json(block);
   } catch (error) {
     console.error('Add block error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 };
 
@@ -311,11 +311,11 @@ export const updateBlock = async (req: AuthRequest, res: Response) => {
     });
 
     if (!kpi) {
-      return res.status(404).json({ error: 'KPI not found' });
+      return res.status(404).json({ error: 'KPI не найден' });
     }
 
     if (kpi.status !== 'DRAFT' && kpi.status !== 'REJECTED') {
-      return res.status(400).json({ error: 'Can only update blocks in KPI with DRAFT or REJECTED status' });
+      return res.status(400).json({ error: 'Можно редактировать блоки только в KPI в статусе Черновик или Отклонён' });
     }
 
     const block = await prisma.kpiBlock.findFirst({
@@ -323,7 +323,7 @@ export const updateBlock = async (req: AuthRequest, res: Response) => {
     });
 
     if (!block) {
-      return res.status(404).json({ error: 'Block not found' });
+      return res.status(404).json({ error: 'Блок не найден' });
     }
 
     const updateData: any = {};
@@ -344,7 +344,7 @@ export const updateBlock = async (req: AuthRequest, res: Response) => {
     res.json(updatedBlock);
   } catch (error) {
     console.error('Update block error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 };
 
@@ -358,11 +358,11 @@ export const deleteBlock = async (req: AuthRequest, res: Response) => {
     });
 
     if (!kpi) {
-      return res.status(404).json({ error: 'KPI not found' });
+      return res.status(404).json({ error: 'KPI не найден' });
     }
 
     if (kpi.status !== 'DRAFT' && kpi.status !== 'REJECTED') {
-      return res.status(400).json({ error: 'Can only delete blocks from KPI with DRAFT or REJECTED status' });
+      return res.status(400).json({ error: 'Можно удалять блоки только из KPI в статусе Черновик или Отклонён' });
     }
 
     const block = await prisma.kpiBlock.findFirst({
@@ -370,17 +370,17 @@ export const deleteBlock = async (req: AuthRequest, res: Response) => {
     });
 
     if (!block) {
-      return res.status(404).json({ error: 'Block not found' });
+      return res.status(404).json({ error: 'Блок не найден' });
     }
 
     await prisma.kpiBlock.delete({
       where: { id: parseInt(blockId) },
     });
 
-    res.json({ message: 'Block deleted' });
+    res.json({ message: 'Блок удалён' });
   } catch (error) {
     console.error('Delete block error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 };
 
@@ -393,7 +393,7 @@ export const addTask = async (req: AuthRequest, res: Response) => {
     const { name, weight, unit, planValue, isOptional } = req.body;
 
     if (!name || weight === undefined) {
-      return res.status(400).json({ error: 'Name and weight are required' });
+      return res.status(400).json({ error: 'Название и вес обязательны' });
     }
 
     const kpi = await prisma.kpi.findUnique({
@@ -401,11 +401,11 @@ export const addTask = async (req: AuthRequest, res: Response) => {
     });
 
     if (!kpi) {
-      return res.status(404).json({ error: 'KPI not found' });
+      return res.status(404).json({ error: 'KPI не найден' });
     }
 
     if (kpi.status !== 'DRAFT' && kpi.status !== 'REJECTED') {
-      return res.status(400).json({ error: 'Can only add tasks to KPI in DRAFT or REJECTED status' });
+      return res.status(400).json({ error: 'Можно добавлять показатели только в KPI в статусе Черновик или Отклонён' });
     }
 
     const block = await prisma.kpiBlock.findFirst({
@@ -414,7 +414,7 @@ export const addTask = async (req: AuthRequest, res: Response) => {
     });
 
     if (!block) {
-      return res.status(404).json({ error: 'Block not found' });
+      return res.status(404).json({ error: 'Блок не найден' });
     }
 
     // Определить порядок для новой задачи
@@ -435,7 +435,7 @@ export const addTask = async (req: AuthRequest, res: Response) => {
     res.status(201).json(task);
   } catch (error) {
     console.error('Add task error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 };
 
@@ -450,11 +450,11 @@ export const updateTask = async (req: AuthRequest, res: Response) => {
     });
 
     if (!kpi) {
-      return res.status(404).json({ error: 'KPI not found' });
+      return res.status(404).json({ error: 'KPI не найден' });
     }
 
     if (kpi.status !== 'DRAFT' && kpi.status !== 'REJECTED') {
-      return res.status(400).json({ error: 'Can only update tasks in KPI with DRAFT or REJECTED status' });
+      return res.status(400).json({ error: 'Можно редактировать показатели только в KPI в статусе Черновик или Отклонён' });
     }
 
     const task = await prisma.kpiTask.findFirst({
@@ -463,7 +463,7 @@ export const updateTask = async (req: AuthRequest, res: Response) => {
     });
 
     if (!task || task.block.kpiId !== parseInt(id)) {
-      return res.status(404).json({ error: 'Task not found' });
+      return res.status(404).json({ error: 'Показатель не найден' });
     }
 
     const updateData: any = {};
@@ -482,7 +482,7 @@ export const updateTask = async (req: AuthRequest, res: Response) => {
     res.json(updatedTask);
   } catch (error) {
     console.error('Update task error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 };
 
@@ -496,11 +496,11 @@ export const deleteTask = async (req: AuthRequest, res: Response) => {
     });
 
     if (!kpi) {
-      return res.status(404).json({ error: 'KPI not found' });
+      return res.status(404).json({ error: 'KPI не найден' });
     }
 
     if (kpi.status !== 'DRAFT' && kpi.status !== 'REJECTED') {
-      return res.status(400).json({ error: 'Can only delete tasks from KPI with DRAFT or REJECTED status' });
+      return res.status(400).json({ error: 'Можно удалять показатели только из KPI в статусе Черновик или Отклонён' });
     }
 
     const task = await prisma.kpiTask.findFirst({
@@ -509,17 +509,17 @@ export const deleteTask = async (req: AuthRequest, res: Response) => {
     });
 
     if (!task || task.block.kpiId !== parseInt(id)) {
-      return res.status(404).json({ error: 'Task not found' });
+      return res.status(404).json({ error: 'Показатель не найден' });
     }
 
     await prisma.kpiTask.delete({
       where: { id: parseInt(taskId) },
     });
 
-    res.json({ message: 'Task deleted' });
+    res.json({ message: 'Показатель удалён' });
   } catch (error) {
     console.error('Delete task error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 };
 
@@ -532,7 +532,7 @@ export const assignUsers = async (req: AuthRequest, res: Response) => {
     const { userIds } = req.body;
 
     if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
-      return res.status(400).json({ error: 'userIds array is required' });
+      return res.status(400).json({ error: 'Массив userIds обязателен' });
     }
 
     const kpi = await prisma.kpi.findUnique({
@@ -540,11 +540,11 @@ export const assignUsers = async (req: AuthRequest, res: Response) => {
     });
 
     if (!kpi) {
-      return res.status(404).json({ error: 'KPI not found' });
+      return res.status(404).json({ error: 'KPI не найден' });
     }
 
     if (kpi.status !== 'DRAFT' && kpi.status !== 'REJECTED') {
-      return res.status(400).json({ error: 'Can only assign users to KPI in DRAFT or REJECTED status' });
+      return res.status(400).json({ error: 'Можно назначать сотрудников только на KPI в статусе Черновик или Отклонён' });
     }
 
     // Создать назначения (игнорировать дубликаты)
@@ -576,7 +576,7 @@ export const assignUsers = async (req: AuthRequest, res: Response) => {
     res.status(201).json(createdAssignments);
   } catch (error) {
     console.error('Assign users error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 };
 
@@ -590,11 +590,11 @@ export const removeAssignment = async (req: AuthRequest, res: Response) => {
     });
 
     if (!kpi) {
-      return res.status(404).json({ error: 'KPI not found' });
+      return res.status(404).json({ error: 'KPI не найден' });
     }
 
     if (kpi.status !== 'DRAFT' && kpi.status !== 'REJECTED') {
-      return res.status(400).json({ error: 'Can only remove assignments from KPI in DRAFT or REJECTED status' });
+      return res.status(400).json({ error: 'Можно убирать назначения только у KPI в статусе Черновик или Отклонён' });
     }
 
     const assignment = await prisma.kpiAssignment.findUnique({
@@ -607,17 +607,17 @@ export const removeAssignment = async (req: AuthRequest, res: Response) => {
     });
 
     if (!assignment) {
-      return res.status(404).json({ error: 'Assignment not found' });
+      return res.status(404).json({ error: 'Назначение не найдено' });
     }
 
     await prisma.kpiAssignment.delete({
       where: { id: assignment.id },
     });
 
-    res.json({ message: 'Assignment removed' });
+    res.json({ message: 'Назначение удалено' });
   } catch (error) {
     console.error('Remove assignment error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 };
 
@@ -641,11 +641,11 @@ export const submitForApproval = async (req: AuthRequest, res: Response) => {
     });
 
     if (!kpi) {
-      return res.status(404).json({ error: 'KPI not found' });
+      return res.status(404).json({ error: 'KPI не найден' });
     }
 
     if (kpi.status !== 'DRAFT' && kpi.status !== 'REJECTED') {
-      return res.status(400).json({ error: 'Can only submit KPI in DRAFT or REJECTED status' });
+      return res.status(400).json({ error: 'Можно отправить на согласование KPI только в статусе Черновик или Отклонён' });
     }
 
     // Валидация
@@ -653,41 +653,41 @@ export const submitForApproval = async (req: AuthRequest, res: Response) => {
 
     // Минимум 1 блок
     if (kpi.blocks.length === 0) {
-      errors.push('At least one block is required');
+      errors.push('Необходим хотя бы один блок');
     }
 
     // Каждый блок должен иметь минимум 1 задачу
     for (const block of kpi.blocks) {
       if (block.tasks.length === 0) {
-        errors.push(`Block "${block.name}" must have at least one task`);
+        errors.push(`Блок "${block.name}" должен содержать хотя бы один показатель`);
       }
 
       // Сумма весов НЕопциональных задач в блоке = 100%
       const requiredTasks = block.tasks.filter((task) => !task.isOptional);
       const taskWeight = requiredTasks.reduce((sum, task) => sum + task.weight, 0);
       if (requiredTasks.length > 0 && Math.abs(taskWeight - 100) > 0.01) {
-        errors.push(`Required tasks in block "${block.name}" must have total weight of 100%, current: ${taskWeight}%`);
+        errors.push(`Обязательные показатели в блоке "${block.name}" должны иметь суммарный вес 100%, текущий: ${taskWeight}%`);
       }
     }
 
     // Сумма весов блоков = 100%
     const blockWeight = kpi.blocks.reduce((sum, block) => sum + block.weight, 0);
     if (Math.abs(blockWeight - 100) > 0.01) {
-      errors.push(`Total block weight must be 100%, current: ${blockWeight}%`);
+      errors.push(`Суммарный вес блоков должен быть 100%, текущий: ${blockWeight}%`);
     }
 
     // Минимум 1 назначенный сотрудник
     if (kpi.assignments.length === 0) {
-      errors.push('At least one employee must be assigned');
+      errors.push('Необходимо назначить хотя бы одного сотрудника');
     }
 
     // Срок в будущем
     if (new Date(kpi.deadline) <= new Date()) {
-      errors.push('Deadline must be in the future');
+      errors.push('Срок должен быть в будущем');
     }
 
     if (errors.length > 0) {
-      return res.status(400).json({ error: 'Validation failed', errors });
+      return res.status(400).json({ error: 'Ошибка валидации', errors });
     }
 
     const updatedKpi = await prisma.kpi.update({
@@ -725,7 +725,7 @@ export const submitForApproval = async (req: AuthRequest, res: Response) => {
     res.json(updatedKpi);
   } catch (error) {
     console.error('Submit for approval error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 };
 
@@ -736,7 +736,7 @@ export const getPendingApproval = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId;
     if (!userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      return res.status(401).json({ error: 'Не авторизован' });
     }
 
     const kpis = await prisma.kpi.findMany({
@@ -776,7 +776,7 @@ export const getPendingApproval = async (req: AuthRequest, res: Response) => {
     res.json(kpis);
   } catch (error) {
     console.error('Get pending approval error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 };
 
@@ -787,7 +787,7 @@ export const approveKpi = async (req: AuthRequest, res: Response) => {
     const userId = req.userId;
 
     if (!userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      return res.status(401).json({ error: 'Не авторизован' });
     }
 
     const kpi = await prisma.kpi.findUnique({
@@ -795,15 +795,15 @@ export const approveKpi = async (req: AuthRequest, res: Response) => {
     });
 
     if (!kpi) {
-      return res.status(404).json({ error: 'KPI not found' });
+      return res.status(404).json({ error: 'KPI не найден' });
     }
 
     if (kpi.approverId !== userId) {
-      return res.status(403).json({ error: 'You are not the approver for this KPI' });
+      return res.status(403).json({ error: 'Вы не являетесь утверждающим для этого KPI' });
     }
 
     if (kpi.status !== 'PENDING_APPROVAL') {
-      return res.status(400).json({ error: 'KPI is not pending approval' });
+      return res.status(400).json({ error: 'KPI не ожидает утверждения' });
     }
 
     const updatedKpi = await prisma.kpi.update({
@@ -840,7 +840,7 @@ export const approveKpi = async (req: AuthRequest, res: Response) => {
     res.json(updatedKpi);
   } catch (error) {
     console.error('Approve KPI error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 };
 
@@ -852,11 +852,11 @@ export const rejectKpi = async (req: AuthRequest, res: Response) => {
     const userId = req.userId;
 
     if (!userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      return res.status(401).json({ error: 'Не авторизован' });
     }
 
     if (!reason || reason.trim() === '') {
-      return res.status(400).json({ error: 'Rejection reason is required' });
+      return res.status(400).json({ error: 'Причина отклонения обязательна' });
     }
 
     const kpi = await prisma.kpi.findUnique({
@@ -864,15 +864,15 @@ export const rejectKpi = async (req: AuthRequest, res: Response) => {
     });
 
     if (!kpi) {
-      return res.status(404).json({ error: 'KPI not found' });
+      return res.status(404).json({ error: 'KPI не найден' });
     }
 
     if (kpi.approverId !== userId) {
-      return res.status(403).json({ error: 'You are not the approver for this KPI' });
+      return res.status(403).json({ error: 'Вы не являетесь утверждающим для этого KPI' });
     }
 
     if (kpi.status !== 'PENDING_APPROVAL') {
-      return res.status(400).json({ error: 'KPI is not pending approval' });
+      return res.status(400).json({ error: 'KPI не ожидает утверждения' });
     }
 
     const updatedKpi = await prisma.kpi.update({
@@ -909,7 +909,7 @@ export const rejectKpi = async (req: AuthRequest, res: Response) => {
     res.json(updatedKpi);
   } catch (error) {
     console.error('Reject KPI error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 };
 
@@ -920,7 +920,7 @@ export const getMyKpis = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId;
     if (!userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      return res.status(401).json({ error: 'Не авторизован' });
     }
 
     const assignments = await prisma.kpiAssignment.findMany({
@@ -956,7 +956,7 @@ export const getMyKpis = async (req: AuthRequest, res: Response) => {
     res.json(assignments);
   } catch (error) {
     console.error('Get my KPIs error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 };
 
@@ -967,7 +967,7 @@ export const getMyKpiDetails = async (req: AuthRequest, res: Response) => {
     const userId = req.userId;
 
     if (!userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      return res.status(401).json({ error: 'Не авторизован' });
     }
 
     const assignment = await prisma.kpiAssignment.findUnique({
@@ -998,17 +998,17 @@ export const getMyKpiDetails = async (req: AuthRequest, res: Response) => {
     });
 
     if (!assignment) {
-      return res.status(404).json({ error: 'KPI assignment not found' });
+      return res.status(404).json({ error: 'Назначение KPI не найдено' });
     }
 
     if (assignment.kpi.status !== 'APPROVED' && assignment.kpi.status !== 'COMPLETED') {
-      return res.status(403).json({ error: 'KPI is not available' });
+      return res.status(403).json({ error: 'KPI недоступен' });
     }
 
     res.json(assignment);
   } catch (error) {
     console.error('Get my KPI details error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 };
 
@@ -1020,11 +1020,11 @@ export const saveFactValues = async (req: AuthRequest, res: Response) => {
     const userId = req.userId;
 
     if (!userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      return res.status(401).json({ error: 'Не авторизован' });
     }
 
     if (!facts || !Array.isArray(facts)) {
-      return res.status(400).json({ error: 'facts array is required' });
+      return res.status(400).json({ error: 'Массив facts обязателен' });
     }
 
     const assignment = await prisma.kpiAssignment.findUnique({
@@ -1040,15 +1040,15 @@ export const saveFactValues = async (req: AuthRequest, res: Response) => {
     });
 
     if (!assignment) {
-      return res.status(404).json({ error: 'KPI assignment not found' });
+      return res.status(404).json({ error: 'Назначение KPI не найдено' });
     }
 
     if (assignment.kpi.status !== 'APPROVED') {
-      return res.status(400).json({ error: 'Can only update facts for APPROVED KPI' });
+      return res.status(400).json({ error: 'Можно обновлять факт-значения только для утверждённого KPI' });
     }
 
     if (assignment.isSubmitted) {
-      return res.status(400).json({ error: 'Results already submitted' });
+      return res.status(400).json({ error: 'Результаты уже отправлены' });
     }
 
     // Сохранить факт-значения
@@ -1078,7 +1078,7 @@ export const saveFactValues = async (req: AuthRequest, res: Response) => {
     res.json(savedFacts);
   } catch (error) {
     console.error('Save fact values error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 };
 
@@ -1089,7 +1089,7 @@ export const submitResults = async (req: AuthRequest, res: Response) => {
     const userId = req.userId;
 
     if (!userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      return res.status(401).json({ error: 'Не авторизован' });
     }
 
     const assignment = await prisma.kpiAssignment.findUnique({
@@ -1114,15 +1114,15 @@ export const submitResults = async (req: AuthRequest, res: Response) => {
     });
 
     if (!assignment) {
-      return res.status(404).json({ error: 'KPI assignment not found' });
+      return res.status(404).json({ error: 'Назначение KPI не найдено' });
     }
 
     if (assignment.kpi.status !== 'APPROVED') {
-      return res.status(400).json({ error: 'Can only submit results for APPROVED KPI' });
+      return res.status(400).json({ error: 'Можно отправить результаты только для утверждённого KPI' });
     }
 
     if (assignment.isSubmitted) {
-      return res.status(400).json({ error: 'Results already submitted' });
+      return res.status(400).json({ error: 'Результаты уже отправлены' });
     }
 
     // Получить все ID обязательных задач (не опциональных)
@@ -1134,14 +1134,14 @@ export const submitResults = async (req: AuthRequest, res: Response) => {
     const missingTasks = requiredTaskIds.filter((id) => !filledTaskIds.includes(id));
     if (missingTasks.length > 0) {
       return res.status(400).json({
-        error: 'All required tasks must have fact values',
+        error: 'Все обязательные показатели должны иметь факт-значения',
         missingTasks,
       });
     }
 
     // Проверить срок
     if (new Date() > new Date(assignment.kpi.deadline)) {
-      return res.status(400).json({ error: 'Deadline has passed' });
+      return res.status(400).json({ error: 'Срок сдачи истёк' });
     }
 
     // Обновить назначение
@@ -1178,6 +1178,6 @@ export const submitResults = async (req: AuthRequest, res: Response) => {
     res.json(updatedAssignment);
   } catch (error) {
     console.error('Submit results error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 };

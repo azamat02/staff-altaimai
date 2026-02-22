@@ -4,7 +4,7 @@
 FROM node:20-alpine AS builder
 
 # Build argument for API URL - MUST be before use
-ARG VITE_API_URL=http://localhost:3001/api
+ARG VITE_API_URL=/api
 
 WORKDIR /app
 

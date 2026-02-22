@@ -12,6 +12,9 @@ import ScoringReportPage from './pages/ScoringReportPage';
 import KpiManagementPage from './pages/KpiManagementPage';
 import KpiCreatePage from './pages/KpiCreatePage';
 import KpiFillPage from './pages/KpiFillPage';
+import AdminsPage from './pages/AdminsPage';
+import OperatorPage from './pages/OperatorPage';
+import ApprovalsPage from './pages/ApprovalsPage';
 
 // Protected route для админов
 const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -30,6 +33,31 @@ const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   }
 
   if (role !== 'admin') {
+    if (role === 'operator') return <Navigate to="/operator" replace />;
+    return <Navigate to="/portal" replace />;
+  }
+
+  return <>{children}</>;
+};
+
+// Protected route для операторов
+const OperatorRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { isAuthenticated, isLoading, role } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <div className="text-gray-500">Загрузка...</div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (role !== 'operator') {
+    if (role === 'admin') return <Navigate to="/users" replace />;
     return <Navigate to="/portal" replace />;
   }
 
@@ -53,6 +81,7 @@ const UserRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   }
 
   if (role !== 'user') {
+    if (role === 'operator') return <Navigate to="/operator" replace />;
     return <Navigate to="/users" replace />;
   }
 
@@ -73,7 +102,9 @@ const App: React.FC = () => {
   // Определение редиректа после авторизации
   const getDefaultRoute = () => {
     if (!isAuthenticated) return '/login';
-    return role === 'admin' ? '/users' : '/portal';
+    if (role === 'admin') return '/users';
+    if (role === 'operator') return '/operator';
+    return '/portal';
   };
 
   return (
@@ -82,7 +113,7 @@ const App: React.FC = () => {
         path="/login"
         element={
           isAuthenticated ? (
-            <Navigate to={role === 'admin' ? '/users' : '/portal'} replace />
+            <Navigate to={getDefaultRoute()} replace />
           ) : (
             <LoginPage />
           )
@@ -144,6 +175,32 @@ const App: React.FC = () => {
           <AdminRoute>
             <KpiManagementPage />
           </AdminRoute>
+        }
+      />
+      <Route
+        path="/admins"
+        element={
+          <AdminRoute>
+            <AdminsPage />
+          </AdminRoute>
+        }
+      />
+      <Route
+        path="/approvals"
+        element={
+          <AdminRoute>
+            <ApprovalsPage />
+          </AdminRoute>
+        }
+      />
+
+      {/* Operator route */}
+      <Route
+        path="/operator"
+        element={
+          <OperatorRoute>
+            <OperatorPage />
+          </OperatorRoute>
         }
       />
 

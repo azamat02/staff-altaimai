@@ -250,7 +250,7 @@ const KpiCreatePage: React.FC = () => {
     return (
       <Layout>
         <div className="flex flex-col items-center justify-center h-64">
-          <div className="w-8 h-8 border-2 border-slate-200 border-t-slate-900 rounded-full animate-spin" />
+          <div className="w-8 h-8 border-2 border-slate-200 border-t-gold-500 rounded-full animate-spin" />
           <p className="mt-4 text-sm text-slate-500">Загрузка...</p>
         </div>
       </Layout>
@@ -519,7 +519,7 @@ const KpiCreatePage: React.FC = () => {
                               <button
                                 type="button"
                                 onClick={() => addTask(block.id)}
-                                className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                                className="text-sm text-gold-600 hover:text-gold-700 flex items-center gap-1"
                               >
                                 <PlusIcon /> Добавить показатель
                               </button>
@@ -612,7 +612,7 @@ const KpiCreatePage: React.FC = () => {
                                             type="checkbox"
                                             checked={task.isOptional}
                                             onChange={(e) => updateTask(block.id, task.id, 'isOptional', e.target.checked)}
-                                            className="w-4 h-4 text-blue-600 rounded border-slate-300"
+                                            className="w-4 h-4 text-gold-600 rounded border-slate-300"
                                           />
                                           <span className="text-xs text-slate-500">Опционально</span>
                                         </label>

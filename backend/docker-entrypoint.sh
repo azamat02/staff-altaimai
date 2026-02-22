@@ -11,6 +11,10 @@ echo "Database is up!"
 echo "Running Prisma migrations..."
 npx prisma db push --accept-data-loss
 
+# Ensure the first admin is a super admin (for existing databases)
+echo "Ensuring super admin role..."
+PGPASSWORD="$DB_PASSWORD" psql -h db -U "$DB_USER" -d "$DB_NAME" -c "UPDATE \"Admin\" SET role = 'SUPER_ADMIN' WHERE id = 1;" 2>/dev/null || true
+
 echo "Checking if seed data needs to be loaded..."
 # Check if Admin table has data
 ADMIN_COUNT=$(psql -h db -U "$DB_USER" -d "$DB_NAME" -t -c "SELECT COUNT(*) FROM \"Admin\";" 2>/dev/null | tr -d ' ' || echo "0")

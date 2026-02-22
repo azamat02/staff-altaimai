@@ -7,6 +7,7 @@ import UserForm from '../components/UserForm';
 interface UserFormData {
   fullName: string;
   position: string;
+  email: string;
   groupId: number;
   managerId: number | null;
   submitsBasicReport: boolean;
@@ -142,7 +143,7 @@ const UsersPage: React.FC = () => {
     return (
       <Layout>
         <div className="flex flex-col items-center justify-center h-64">
-          <div className="w-8 h-8 border-2 border-slate-200 border-t-slate-900 rounded-full animate-spin" />
+          <div className="w-8 h-8 border-2 border-slate-200 border-t-gold-500 rounded-full animate-spin" />
           <p className="mt-4 text-sm text-slate-500">Загрузка...</p>
         </div>
       </Layout>

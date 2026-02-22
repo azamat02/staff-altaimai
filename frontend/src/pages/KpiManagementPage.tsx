@@ -273,7 +273,7 @@ const KpiFormModal: React.FC<KpiFormModalProps> = ({ kpi, users, onSave, onClose
                 <button
                   type="button"
                   onClick={addTask}
-                  className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                  className="text-sm text-gold-600 hover:text-gold-700 flex items-center gap-1"
                 >
                   <PlusIcon /> Добавить показатель
                 </button>
@@ -667,7 +667,7 @@ const KpiDetailModal: React.FC<KpiDetailModalProps> = ({ kpi, users, onClose, on
               {canEdit && (
                 <button
                   onClick={() => setShowAddBlock(true)}
-                  className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                  className="text-sm text-gold-600 hover:text-gold-700 flex items-center gap-1"
                 >
                   <PlusIcon /> Добавить блок
                 </button>
@@ -676,7 +676,7 @@ const KpiDetailModal: React.FC<KpiDetailModalProps> = ({ kpi, users, onClose, on
 
             {/* Форма добавления блока */}
             {showAddBlock && canEdit && (
-              <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="mb-4 p-4 bg-gold-50 border border-gold-200 rounded-lg">
                 <h4 className="text-sm font-medium text-slate-700 mb-3">Новый блок</h4>
                 <div className="flex gap-3 items-end">
                   <div className="flex-1">
@@ -783,7 +783,7 @@ const KpiDetailModal: React.FC<KpiDetailModalProps> = ({ kpi, users, onClose, on
                                   <span className="text-xs text-slate-500">%</span>
                                 </>
                               ) : (
-                                <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded">
+                                <span className="text-xs px-2 py-0.5 bg-gold-100 text-gold-700 rounded">
                                   {block.weight}%
                                 </span>
                               )}
@@ -892,7 +892,7 @@ const KpiDetailModal: React.FC<KpiDetailModalProps> = ({ kpi, users, onClose, on
                               ) : (
                                 <button
                                   onClick={() => setAddingTaskToBlock(block.id)}
-                                  className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                                  className="text-sm text-gold-600 hover:text-gold-700 flex items-center gap-1"
                                 >
                                   <PlusIcon /> Добавить показатель
                                 </button>
@@ -1030,7 +1030,7 @@ const KpiDetailModal: React.FC<KpiDetailModalProps> = ({ kpi, users, onClose, on
               {canEdit && (
                 <button
                   onClick={() => setShowAssignSearch(!showAssignSearch)}
-                  className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                  className="text-sm text-gold-600 hover:text-gold-700 flex items-center gap-1"
                 >
                   <PlusIcon /> Назначить
                 </button>
@@ -1203,7 +1203,7 @@ const KpiManagementPage: React.FC = () => {
     return (
       <Layout>
         <div className="flex flex-col items-center justify-center h-64">
-          <div className="w-8 h-8 border-2 border-slate-200 border-t-slate-900 rounded-full animate-spin" />
+          <div className="w-8 h-8 border-2 border-slate-200 border-t-gold-500 rounded-full animate-spin" />
           <p className="mt-4 text-sm text-slate-500">Загрузка...</p>
         </div>
       </Layout>
@@ -1249,7 +1249,7 @@ const KpiManagementPage: React.FC = () => {
                 onClick={() => setStatusFilter(status)}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                   statusFilter === status
-                    ? 'bg-slate-900 text-white'
+                    ? 'bg-brand-dark text-white'
                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
               >
@@ -1295,7 +1295,7 @@ const KpiManagementPage: React.FC = () => {
                   <td className="px-6 py-4">
                     <button
                       onClick={() => setSelectedKpi(kpi)}
-                      className="text-sm font-medium text-blue-600 hover:text-blue-700"
+                      className="text-sm font-medium text-gold-600 hover:text-gold-700"
                     >
                       {kpi.title}
                     </button>

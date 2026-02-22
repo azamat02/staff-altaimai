@@ -200,7 +200,7 @@ const EmployeeDetailsModal: React.FC<EmployeeDetailsModalProps> = ({ groupId, pe
         <div className="flex-1 overflow-y-auto p-6">
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
-              <div className="w-8 h-8 border-2 border-slate-200 border-t-slate-900 rounded-full animate-spin" />
+              <div className="w-8 h-8 border-2 border-slate-200 border-t-gold-500 rounded-full animate-spin" />
             </div>
           ) : employees.length === 0 ? (
             <div className="text-center py-12 text-slate-500">
@@ -379,7 +379,7 @@ const GroupScoresPage: React.FC = () => {
         <div className="card">
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
-              <div className="w-8 h-8 border-2 border-slate-200 border-t-slate-900 rounded-full animate-spin" />
+              <div className="w-8 h-8 border-2 border-slate-200 border-t-gold-500 rounded-full animate-spin" />
             </div>
           ) : groups.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12">

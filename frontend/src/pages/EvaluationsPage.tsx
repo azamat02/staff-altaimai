@@ -129,9 +129,9 @@ const EvaluationsPage: React.FC = () => {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="min-h-screen bg-brand-light flex items-center justify-center">
         <div className="flex flex-col items-center">
-          <div className="w-8 h-8 border-2 border-slate-200 border-t-slate-900 rounded-full animate-spin" />
+          <div className="w-8 h-8 border-2 border-slate-200 border-t-gold-500 rounded-full animate-spin" />
           <p className="mt-4 text-sm text-slate-500">Загрузка...</p>
         </div>
       </div>
@@ -139,27 +139,24 @@ const EvaluationsPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-brand-light">
       {/* Header */}
-      <nav className="fixed top-0 left-0 right-0 z-40 bg-white border-b border-slate-200">
+      <nav className="fixed top-0 left-0 right-0 z-40 bg-brand-dark border-b border-brand-darker">
         <div className="max-w-4xl mx-auto px-6">
           <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-slate-900 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">S</span>
-              </div>
-              <span className="text-lg font-semibold text-slate-900">Staff AltaimAI</span>
+            <div className="flex items-center">
+              <img src="/logo.webp" alt="Altai Mai" className="h-8" />
             </div>
             <div className="flex items-center space-x-4">
               <button
                 onClick={() => navigate('/portal')}
-                className="text-sm text-slate-600 hover:text-slate-900"
+                className="text-sm text-white/70 hover:text-gold-500"
               >
                 Моя страница
               </button>
               <button
                 onClick={handleLogout}
-                className="flex items-center space-x-2 px-3 py-2 text-sm font-medium text-slate-500 hover:text-slate-700 hover:bg-slate-50 rounded-lg transition-colors"
+                className="flex items-center space-x-2 px-3 py-2 text-sm font-medium text-white/50 hover:text-gold-500 hover:bg-white/10 rounded-lg transition-colors"
               >
                 <LogoutIcon />
                 <span>Выход</span>
@@ -183,7 +180,7 @@ const EvaluationsPage: React.FC = () => {
           {isLoading ? (
             <div className="card p-12 flex items-center justify-center">
               <div className="flex flex-col items-center">
-                <div className="w-8 h-8 border-2 border-slate-200 border-t-slate-900 rounded-full animate-spin" />
+                <div className="w-8 h-8 border-2 border-slate-200 border-t-gold-500 rounded-full animate-spin" />
                 <p className="mt-4 text-sm text-slate-500">Загрузка...</p>
               </div>
             </div>
@@ -256,7 +253,7 @@ const EvaluationsPage: React.FC = () => {
                     {subordinates.map((sub) => (
                       <div
                         key={sub.id}
-                        className="px-6 py-4 flex items-center justify-between hover:bg-slate-50"
+                        className="px-6 py-4 flex items-center justify-between hover:bg-gold-50/50"
                       >
                         <div className="flex items-center space-x-4">
                           <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center flex-shrink-0">

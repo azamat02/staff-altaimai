@@ -98,7 +98,7 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full px-4 py-2.5 text-sm text-left bg-white border border-slate-200 rounded-lg hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-colors flex items-center justify-between"
+        className="w-full px-4 py-2.5 text-sm text-left bg-white border border-slate-200 rounded-lg hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-gold-500/10 focus:border-slate-400 transition-colors flex items-center justify-between"
       >
         <span className={selectedOption ? 'text-slate-900' : 'text-slate-400'}>
           {selectedOption ? selectedOption.label : placeholder}
@@ -123,7 +123,7 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder={searchPlaceholder}
-                className="w-full pl-9 pr-3 py-2 text-sm bg-slate-50 border-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+                className="w-full pl-9 pr-3 py-2 text-sm bg-slate-50 border-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-gold-500/10"
               />
             </div>
           </div>

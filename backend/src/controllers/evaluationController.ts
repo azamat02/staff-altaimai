@@ -51,7 +51,7 @@ export const getEvaluations = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId;
     if (!userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      return res.status(401).json({ error: 'Не авторизован' });
     }
 
     const evaluations = await prisma.evaluation.findMany({
@@ -73,7 +73,7 @@ export const getEvaluations = async (req: AuthRequest, res: Response) => {
     res.json(evaluations);
   } catch (error) {
     console.error('Get evaluations error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 };
 
@@ -114,7 +114,7 @@ export const getAllEvaluations = async (req: AuthRequest, res: Response) => {
     res.json(evaluations);
   } catch (error) {
     console.error('Get all evaluations error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 };
 
@@ -149,18 +149,18 @@ export const getEvaluation = async (req: AuthRequest, res: Response) => {
     });
 
     if (!evaluation) {
-      return res.status(404).json({ error: 'Evaluation not found' });
+      return res.status(404).json({ error: 'Оценка не найдена' });
     }
 
     // Проверка прав доступа: админ или владелец оценки
     if (!adminId && evaluation.evaluatorId !== userId) {
-      return res.status(403).json({ error: 'Forbidden' });
+      return res.status(403).json({ error: 'Доступ запрещён' });
     }
 
     res.json(evaluation);
   } catch (error) {
     console.error('Get evaluation error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 };
 
@@ -178,7 +178,7 @@ export const getPendingEvaluations = async (req: AuthRequest, res: Response) => 
   try {
     const userId = req.userId;
     if (!userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      return res.status(401).json({ error: 'Не авторизован' });
     }
 
     // Получить активный период
@@ -243,7 +243,7 @@ export const getPendingEvaluations = async (req: AuthRequest, res: Response) => 
     });
   } catch (error) {
     console.error('Get pending evaluations error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 };
 
@@ -252,13 +252,13 @@ export const createEvaluation = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId;
     if (!userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      return res.status(401).json({ error: 'Не авторизован' });
     }
 
     const { periodId, evaluateeId, scores, comments } = req.body;
 
     if (!periodId || !evaluateeId || !scores) {
-      return res.status(400).json({ error: 'Period ID, evaluatee ID, and scores are required' });
+      return res.status(400).json({ error: 'ID периода, ID оцениваемого и оценки обязательны' });
     }
 
     // Проверить период
@@ -267,11 +267,11 @@ export const createEvaluation = async (req: AuthRequest, res: Response) => {
     });
 
     if (!period) {
-      return res.status(404).json({ error: 'Period not found' });
+      return res.status(404).json({ error: 'Период не найден' });
     }
 
     if (!period.isActive) {
-      return res.status(400).json({ error: 'Period is not active' });
+      return res.status(400).json({ error: 'Период не активен' });
     }
 
     // Проверить, что evaluatee является подчиненным evaluator
@@ -283,11 +283,11 @@ export const createEvaluation = async (req: AuthRequest, res: Response) => {
     });
 
     if (!evaluatee) {
-      return res.status(404).json({ error: 'Evaluatee not found' });
+      return res.status(404).json({ error: 'Оцениваемый сотрудник не найден' });
     }
 
     if (evaluatee.managerId !== userId) {
-      return res.status(403).json({ error: 'You can only evaluate your direct subordinates' });
+      return res.status(403).json({ error: 'Вы можете оценивать только своих прямых подчинённых' });
     }
 
     // Определить тип формы
@@ -299,10 +299,10 @@ export const createEvaluation = async (req: AuthRequest, res: Response) => {
     for (const param of expectedParams) {
       const score = scores[param];
       if (score === undefined || score === null) {
-        return res.status(400).json({ error: `Missing score for parameter: ${param}` });
+        return res.status(400).json({ error: `Отсутствует оценка по параметру: ${param}` });
       }
       if (typeof score !== 'number' || !Number.isInteger(score) || score < 1 || score > 5) {
-        return res.status(400).json({ error: `Invalid score for parameter: ${param}. Must be integer 1-5.` });
+        return res.status(400).json({ error: `Некорректная оценка по параметру: ${param}. Должно быть целое число от 1 до 5.` });
       }
       scoreValues.push(score);
     }
@@ -353,6 +353,6 @@ export const createEvaluation = async (req: AuthRequest, res: Response) => {
     res.status(201).json(evaluation);
   } catch (error) {
     console.error('Create evaluation error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 };

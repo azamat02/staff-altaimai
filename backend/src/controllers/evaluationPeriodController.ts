@@ -16,7 +16,7 @@ export const getPeriods = async (req: AuthRequest, res: Response) => {
     res.json(periods);
   } catch (error) {
     console.error('Get periods error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 };
 
@@ -34,13 +34,13 @@ export const getPeriod = async (req: AuthRequest, res: Response) => {
     });
 
     if (!period) {
-      return res.status(404).json({ error: 'Period not found' });
+      return res.status(404).json({ error: 'Период не найден' });
     }
 
     res.json(period);
   } catch (error) {
     console.error('Get period error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 };
 
@@ -50,7 +50,7 @@ export const createPeriod = async (req: AuthRequest, res: Response) => {
     const { name, startDate, endDate, isActive = true } = req.body;
 
     if (!name || !startDate || !endDate) {
-      return res.status(400).json({ error: 'Name, start date, and end date are required' });
+      return res.status(400).json({ error: 'Название, дата начала и дата окончания обязательны' });
     }
 
     const period = await prisma.evaluationPeriod.create({
@@ -65,7 +65,7 @@ export const createPeriod = async (req: AuthRequest, res: Response) => {
     res.status(201).json(period);
   } catch (error) {
     console.error('Create period error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 };
 
@@ -80,7 +80,7 @@ export const updatePeriod = async (req: AuthRequest, res: Response) => {
     });
 
     if (!existingPeriod) {
-      return res.status(404).json({ error: 'Period not found' });
+      return res.status(404).json({ error: 'Период не найден' });
     }
 
     const period = await prisma.evaluationPeriod.update({
@@ -96,7 +96,7 @@ export const updatePeriod = async (req: AuthRequest, res: Response) => {
     res.json(period);
   } catch (error) {
     console.error('Update period error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 };
 
@@ -110,16 +110,16 @@ export const deletePeriod = async (req: AuthRequest, res: Response) => {
     });
 
     if (!existingPeriod) {
-      return res.status(404).json({ error: 'Period not found' });
+      return res.status(404).json({ error: 'Период не найден' });
     }
 
     await prisma.evaluationPeriod.delete({
       where: { id: parseInt(id) },
     });
 
-    res.json({ message: 'Period deleted successfully' });
+    res.json({ message: 'Период успешно удалён' });
   } catch (error) {
     console.error('Delete period error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 };

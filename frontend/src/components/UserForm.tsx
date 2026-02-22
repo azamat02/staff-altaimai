@@ -6,6 +6,7 @@ import SearchableSelect from './SearchableSelect';
 interface UserFormData {
   fullName: string;
   position: string;
+  email: string;
   groupId: number;
   managerId: number | null;
   submitsBasicReport: boolean;
@@ -53,6 +54,7 @@ const UserForm: React.FC<UserFormProps> = ({
     defaultValues: {
       fullName: '',
       position: '',
+      email: '',
       groupId: groups[0]?.id || 0,
       managerId: null,
       submitsBasicReport: false,
@@ -79,6 +81,7 @@ const UserForm: React.FC<UserFormProps> = ({
       reset({
         fullName: user.fullName,
         position: user.position,
+        email: user.email || '',
         groupId: user.groupId,
         managerId: user.managerId,
         submitsBasicReport: user.submitsBasicReport,
@@ -90,6 +93,7 @@ const UserForm: React.FC<UserFormProps> = ({
       reset({
         fullName: '',
         position: '',
+        email: '',
         groupId: groups[0]?.id || 0,
         managerId: null,
         submitsBasicReport: false,
@@ -193,6 +197,7 @@ const UserForm: React.FC<UserFormProps> = ({
   const onFormSubmit = (data: UserFormData) => {
     onSubmit({
       ...data,
+      email: data.email || '',
       groupId: Number(data.groupId),
       managerId: data.managerId ? Number(data.managerId) : null,
       isGroupLeader: data.isGroupLeader,
@@ -276,6 +281,32 @@ const UserForm: React.FC<UserFormProps> = ({
                 />
                 {errors.position && (
                   <p className="mt-2 text-sm text-red-500">{errors.position.message}</p>
+                )}
+              </div>
+
+              {/* Email */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Email {canAccessPlatform && <span className="text-red-500">*</span>}
+                </label>
+                <input
+                  type="email"
+                  {...register('email', {
+                    validate: (value) => {
+                      if (canAccessPlatform && !value) {
+                        return 'Email обязателен для пользователей с доступом к платформе';
+                      }
+                      if (value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+                        return 'Некорректный формат email';
+                      }
+                      return true;
+                    },
+                  })}
+                  className="input"
+                  placeholder="user@example.com"
+                />
+                {errors.email && (
+                  <p className="mt-2 text-sm text-red-500">{errors.email.message}</p>
                 )}
               </div>
 

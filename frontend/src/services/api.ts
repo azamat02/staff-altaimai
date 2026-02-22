@@ -18,7 +18,9 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    const url = error.config?.url || '';
+    const isAuthEndpoint = url.includes('/auth/login') || url.includes('/auth/reset-password');
+    if (error.response?.status === 401 && !isAuthEndpoint) {
       localStorage.removeItem('token');
       localStorage.removeItem('role');
       window.location.href = '/login';
@@ -26,6 +28,8 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+export type ApprovalStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 
 export interface User {
   id: number;
@@ -41,6 +45,7 @@ export interface User {
   submitsBasicReport: boolean;
   submitsKpi: boolean;
   canAccessPlatform: boolean;
+  email?: string | null;
   // Логин для входа
   login?: string | null;
   // Для user portal
@@ -48,6 +53,11 @@ export interface User {
   // Сгенерированные данные (только при создании/обновлении)
   generatedPassword?: string | null;
   generatedLogin?: string | null;
+  // Одобрение
+  approvalStatus?: ApprovalStatus;
+  rejectionReason?: string | null;
+  createdByAdminId?: number | null;
+  createdByAdmin?: { id: number; username: string; role: string } | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -57,6 +67,11 @@ export interface Group {
   name: string;
   leaderId: number | null;
   leader?: { id: number; fullName: string; position: string } | null;
+  users?: { id: number; fullName: string; position: string }[];
+  approvalStatus?: ApprovalStatus;
+  rejectionReason?: string | null;
+  createdByAdminId?: number | null;
+  createdByAdmin?: { id: number; username: string; role: string } | null;
   createdAt: string;
   _count?: { users: number };
 }
@@ -64,20 +79,25 @@ export interface Group {
 export interface Admin {
   id: number;
   username: string;
+  email?: string | null;
+  role: 'SUPER_ADMIN' | 'ADMIN' | 'OPERATOR';
+  isSuperAdmin?: boolean;
+  createdByAdminId?: number | null;
   createdAt: string;
+  _count?: { createdKpis: number };
 }
 
 // Ответ на логин
 export interface LoginResponse {
   token: string;
-  role: 'admin' | 'user';
+  role: 'admin' | 'operator' | 'user';
   admin?: Admin;
   user?: User;
 }
 
 // Ответ на /me
 export interface MeResponse {
-  role: 'admin' | 'user';
+  role: 'admin' | 'operator' | 'user';
   admin?: Admin;
   user?: User;
 }
@@ -87,6 +107,8 @@ export const authApi = {
     api.post<LoginResponse>('/auth/login', { username, password }),
   logout: () => api.post('/auth/logout'),
   getMe: () => api.get<MeResponse>('/auth/me'),
+  resetPassword: (email: string) =>
+    api.post<{ message: string }>('/auth/reset-password', { email }),
 };
 
 export interface CreateUserData {
@@ -94,6 +116,7 @@ export interface CreateUserData {
   position: string;
   groupId: number;
   managerId?: number | null;
+  email?: string;
   submitsBasicReport?: boolean;
   submitsKpi?: boolean;
   canAccessPlatform?: boolean;
@@ -105,6 +128,7 @@ export interface UpdateUserData {
   position?: string;
   groupId?: number;
   managerId?: number | null;
+  email?: string;
   submitsBasicReport?: boolean;
   submitsKpi?: boolean;
   canAccessPlatform?: boolean;
@@ -548,6 +572,67 @@ export const kpisApi = {
   saveFactValues: (kpiId: number, facts: SaveFactData[]) =>
     api.put<KpiTaskFact[]>(`/kpis/my/${kpiId}/facts`, { facts }),
   submitResults: (kpiId: number) => api.post<MyKpiAssignment>(`/kpis/my/${kpiId}/submit`),
+};
+
+// ==================== Admins API ====================
+
+export interface CreateAdminData {
+  username: string;
+  password: string;
+  email: string;
+  role?: 'ADMIN' | 'OPERATOR';
+}
+
+export const adminsApi = {
+  getAll: () => api.get<Admin[]>('/admins'),
+  create: (data: CreateAdminData) => api.post<Admin>('/admins', data),
+  delete: (id: number) => api.delete(`/admins/${id}`),
+  regeneratePassword: (id: number) =>
+    api.post<{ generatedPassword: string }>(`/admins/${id}/regenerate-password`),
+};
+
+// ==================== Operator API ====================
+
+export interface OperatorDashboard {
+  users: { pending: number; approved: number; rejected: number };
+  groups: { pending: number; approved: number; rejected: number };
+}
+
+export interface CreatePendingUserData {
+  fullName: string;
+  position: string;
+  groupId: number;
+  managerId?: number | null;
+  email?: string;
+  submitsBasicReport?: boolean;
+  submitsKpi?: boolean;
+  canAccessPlatform?: boolean;
+}
+
+export const operatorApi = {
+  getDashboard: () => api.get<OperatorDashboard>('/operator/dashboard'),
+  getUsers: () => api.get<User[]>('/operator/users'),
+  createUser: (data: CreatePendingUserData) => api.post<User>('/operator/users', data),
+  getGroups: () => api.get<Group[]>('/operator/groups'),
+  createGroup: (name: string) => api.post<Group>('/operator/groups', { name }),
+  getApprovedGroups: () => api.get<{ id: number; name: string }[]>('/operator/approved-groups'),
+};
+
+// ==================== Approvals API ====================
+
+export interface PendingApprovalItems {
+  users: User[];
+  groups: Group[];
+}
+
+export const approvalsApi = {
+  getPending: () => api.get<PendingApprovalItems>('/approvals/pending'),
+  approveUser: (id: number) => api.post<User>(`/approvals/users/${id}/approve`),
+  rejectUser: (id: number, reason?: string) =>
+    api.post<User>(`/approvals/users/${id}/reject`, { reason }),
+  approveGroup: (id: number) => api.post<Group>(`/approvals/groups/${id}/approve`),
+  rejectGroup: (id: number, reason?: string) =>
+    api.post<Group>(`/approvals/groups/${id}/reject`, { reason }),
 };
 
 export default api;

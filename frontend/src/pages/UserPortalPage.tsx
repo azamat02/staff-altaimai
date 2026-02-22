@@ -330,7 +330,7 @@ const KpiApprovalSection: React.FC = () => {
           <h2 className="text-lg font-semibold text-slate-900">KPI на утверждение</h2>
         </div>
         <div className="p-6 flex justify-center">
-          <div className="w-6 h-6 border-2 border-slate-200 border-t-slate-900 rounded-full animate-spin" />
+          <div className="w-6 h-6 border-2 border-slate-200 border-t-gold-500 rounded-full animate-spin" />
         </div>
       </div>
     );
@@ -360,7 +360,7 @@ const KpiApprovalSection: React.FC = () => {
               <div>
                 <button
                   onClick={() => setSelectedKpi(kpi)}
-                  className="text-sm font-medium text-blue-600 hover:text-blue-700"
+                  className="text-sm font-medium text-gold-600 hover:text-gold-700"
                 >
                   {kpi.title}
                 </button>
@@ -590,7 +590,7 @@ const MyKpisSection: React.FC = () => {
           <h2 className="text-lg font-semibold text-slate-900">Мои KPI</h2>
         </div>
         <div className="p-6 flex justify-center">
-          <div className="w-6 h-6 border-2 border-slate-200 border-t-slate-900 rounded-full animate-spin" />
+          <div className="w-6 h-6 border-2 border-slate-200 border-t-gold-500 rounded-full animate-spin" />
         </div>
       </div>
     );
@@ -626,7 +626,7 @@ const MyKpisSection: React.FC = () => {
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => navigate(`/my-kpis/${assignment.kpi.id}`)}
-                      className="text-sm font-medium text-blue-600 hover:text-blue-700"
+                      className="text-sm font-medium text-gold-600 hover:text-gold-700"
                     >
                       {assignment.kpi.title}
                     </button>
@@ -651,7 +651,7 @@ const MyKpisSection: React.FC = () => {
                     <div className="mt-3 w-full max-w-xs">
                       <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
                         <div
-                          className="h-full bg-blue-500 transition-all"
+                          className="h-full bg-gold-500 transition-all"
                           style={{ width: `${progress}%` }}
                         />
                       </div>
@@ -685,9 +685,9 @@ const UserPortalPage: React.FC = () => {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="min-h-screen bg-brand-light flex items-center justify-center">
         <div className="flex flex-col items-center">
-          <div className="w-8 h-8 border-2 border-slate-200 border-t-slate-900 rounded-full animate-spin" />
+          <div className="w-8 h-8 border-2 border-slate-200 border-t-gold-500 rounded-full animate-spin" />
           <p className="mt-4 text-sm text-slate-500">Загрузка...</p>
         </div>
       </div>
@@ -699,22 +699,19 @@ const UserPortalPage: React.FC = () => {
     : [];
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-brand-light">
       {/* Header */}
-      <nav className="fixed top-0 left-0 right-0 z-40 bg-white border-b border-slate-200">
+      <nav className="fixed top-0 left-0 right-0 z-40 bg-brand-dark border-b border-brand-darker">
         <div className="max-w-4xl mx-auto px-6">
           <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-slate-900 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">S</span>
-              </div>
-              <span className="text-lg font-semibold text-slate-900">Staff AltaimAI</span>
+            <div className="flex items-center">
+              <img src="/logo.webp" alt="Altai Mai" className="h-8" />
             </div>
             <div className="flex items-center space-x-2">
               {user.subordinatesTree && user.subordinatesTree.length > 0 && (
                 <button
                   onClick={() => navigate('/evaluations')}
-                  className="flex items-center space-x-2 px-3 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition-colors"
+                  className="flex items-center space-x-2 px-3 py-2 text-sm font-medium text-white/70 hover:text-gold-500 hover:bg-white/10 rounded-lg transition-colors"
                 >
                   <ClipboardIcon />
                   <span>Оценка сотрудников</span>
@@ -722,7 +719,7 @@ const UserPortalPage: React.FC = () => {
               )}
               <button
               onClick={handleLogout}
-              className="flex items-center space-x-2 px-3 py-2 text-sm font-medium text-slate-500 hover:text-slate-700 hover:bg-slate-50 rounded-lg transition-colors"
+              className="flex items-center space-x-2 px-3 py-2 text-sm font-medium text-white/50 hover:text-gold-500 hover:bg-white/10 rounded-lg transition-colors"
             >
               <LogoutIcon />
               <span>Выход</span>

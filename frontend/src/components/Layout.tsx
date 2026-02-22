@@ -43,6 +43,18 @@ const KpiIcon = () => (
   </svg>
 );
 
+const ApprovalIcon = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+  </svg>
+);
+
+const AdminShieldIcon = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+  </svg>
+);
+
 const LogoutIcon = () => (
   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -66,21 +78,20 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     { path: '/group-scores', label: 'Оценки групп', icon: ChartIcon },
     { path: '/scoring-report', label: 'Отчёт', icon: ReportIcon },
     { path: '/kpis', label: 'KPI', icon: KpiIcon },
+    { path: '/approvals', label: 'Одобрения', icon: ApprovalIcon },
+    { path: '/admins', label: admin?.isSuperAdmin ? 'Админы' : 'Операторы', icon: AdminShieldIcon },
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-brand-light">
       {/* Top Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-40 bg-white border-b border-slate-200">
+      <nav className="fixed top-0 left-0 right-0 z-40 bg-brand-dark border-b border-brand-darker">
         <div className="max-w-screen-2xl mx-auto px-6">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <div className="flex items-center space-x-8">
-              <Link to="/users" className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-slate-900 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">S</span>
-                </div>
-                <span className="text-lg font-semibold text-slate-900">Staff AltaimAI</span>
+              <Link to="/users" className="flex items-center">
+                <img src="/logo.webp" alt="Altai Mai" className="h-8" />
               </Link>
 
               {/* Navigation Links */}
@@ -94,8 +105,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                       to={item.path}
                       className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                         isActive
-                          ? 'bg-slate-100 text-slate-900'
-                          : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                          ? 'bg-gold-500/20 text-gold-500'
+                          : 'text-white/70 hover:bg-white/10 hover:text-white'
                       }`}
                     >
                       <Icon />
@@ -109,16 +120,16 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             {/* User Menu */}
             <div className="flex items-center space-x-4">
               <div className="hidden sm:flex items-center space-x-3">
-                <div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center">
-                  <span className="text-sm font-medium text-slate-600">
+                <div className="w-8 h-8 bg-gold-500/20 rounded-full flex items-center justify-center">
+                  <span className="text-sm font-medium text-gold-500">
                     {admin?.username?.charAt(0).toUpperCase()}
                   </span>
                 </div>
-                <span className="text-sm font-medium text-slate-700">{admin?.username}</span>
+                <span className="text-sm font-medium text-white/80">{admin?.username}</span>
               </div>
               <button
                 onClick={handleLogout}
-                className="flex items-center space-x-2 px-3 py-2 text-sm font-medium text-slate-500 hover:text-slate-700 hover:bg-slate-50 rounded-lg transition-colors"
+                className="flex items-center space-x-2 px-3 py-2 text-sm font-medium text-white/50 hover:text-gold-500 hover:bg-white/10 rounded-lg transition-colors"
               >
                 <LogoutIcon />
                 <span className="hidden sm:inline">Выход</span>
@@ -129,7 +140,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       </nav>
 
       {/* Mobile Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-slate-200 md:hidden">
+      <div className="fixed bottom-0 left-0 right-0 z-40 bg-brand-dark border-t border-brand-darker md:hidden">
         <div className="flex items-center justify-around py-2">
           {navItems.map((item) => {
             const Icon = item.icon;
@@ -139,7 +150,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 key={item.path}
                 to={item.path}
                 className={`flex flex-col items-center space-y-1 px-4 py-2 rounded-lg ${
-                  isActive ? 'text-slate-900' : 'text-slate-400'
+                  isActive ? 'text-gold-500' : 'text-white/50'
                 }`}
               >
                 <Icon />

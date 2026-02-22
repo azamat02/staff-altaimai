@@ -241,7 +241,7 @@ const EvaluationForm: React.FC<EvaluationFormProps> = ({
                           <InfoIcon />
                         </span>
                         {hoveredParam === param.key && (
-                          <div className="absolute left-0 top-6 z-10 w-64 p-3 bg-slate-900 text-white text-xs rounded-lg shadow-lg">
+                          <div className="absolute left-0 top-6 z-10 w-64 p-3 bg-brand-dark text-white text-xs rounded-lg shadow-lg">
                             {param.hint}
                           </div>
                         )}
@@ -256,7 +256,7 @@ const EvaluationForm: React.FC<EvaluationFormProps> = ({
                         onClick={() => handleScoreChange(param.key, String(value))}
                         className={`w-9 h-9 rounded-full text-sm font-medium transition-all ${
                           scores[param.key] === value
-                            ? 'bg-slate-900 text-white shadow-md'
+                            ? 'bg-brand-dark text-white shadow-md'
                             : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                         }`}
                       >
@@ -271,7 +271,7 @@ const EvaluationForm: React.FC<EvaluationFormProps> = ({
                     value={comments[param.key]}
                     onChange={(e) => handleCommentChange(param.key, e.target.value)}
                     placeholder="Комментарий (опционально)"
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-transparent"
                   />
                 </div>
               </div>

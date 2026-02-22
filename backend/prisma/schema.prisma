@@ -7,14 +7,30 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum AdminRole {
+  SUPER_ADMIN
+  ADMIN
+  OPERATOR
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 model Group {
-  id        Int      @id @default(autoincrement())
-  name      String   @unique
-  leaderId  Int?     @unique  // Один начальник на группу
-  leader    User?    @relation("GroupLeader", fields: [leaderId], references: [id])
-  users     User[]
-  scores    GroupScore[]
-  createdAt DateTime @default(now())
+  id              Int             @id @default(autoincrement())
+  name            String          @unique
+  leaderId        Int?            @unique  // Один начальник на группу
+  leader          User?           @relation("GroupLeader", fields: [leaderId], references: [id])
+  users           User[]
+  scores          GroupScore[]
+  approvalStatus  ApprovalStatus  @default(APPROVED)
+  createdByAdminId Int?
+  createdByAdmin  Admin?          @relation("GroupCreator", fields: [createdByAdminId], references: [id])
+  rejectionReason String?
+  createdAt       DateTime        @default(now())
 }
 
 model User {
@@ -32,8 +48,15 @@ model User {
   submitsBasicReport Boolean  @default(false)  // Сдает базовый отчет
   submitsKpi         Boolean  @default(false)  // Сдает KPI
   canAccessPlatform  Boolean  @default(false)  // Может зайти в платформу
+  email              String?  @unique            // Email для уведомлений
   login              String?  @unique          // Логин для входа
   passwordHash       String?                    // Хеш пароля для входа
+
+  // Одобрение
+  approvalStatus    ApprovalStatus  @default(APPROVED)
+  createdByAdminId  Int?
+  createdByAdmin    Admin?          @relation("UserCreator", fields: [createdByAdminId], references: [id])
+  rejectionReason   String?
 
   // Оценки
   evaluationsGiven    Evaluation[] @relation("EvaluationEvaluator")
@@ -48,12 +71,19 @@ model User {
 }
 
 model Admin {
-  id           Int      @id @default(autoincrement())
-  username     String   @unique
-  passwordHash String
-  createdAt    DateTime @default(now())
+  id               Int        @id @default(autoincrement())
+  username         String     @unique
+  passwordHash     String
+  email            String?    @unique
+  role             AdminRole  @default(ADMIN)
+  createdByAdminId Int?
+  createdByAdmin   Admin?     @relation("AdminCreator", fields: [createdByAdminId], references: [id])
+  createdOperators Admin[]    @relation("AdminCreator")
+  createdAt        DateTime   @default(now())
 
-  createdKpis  Kpi[]    @relation("KpiCreator")
+  createdKpis      Kpi[]      @relation("KpiCreator")
+  createdUsers     User[]     @relation("UserCreator")
+  createdGroups    Group[]    @relation("GroupCreator")
 }
 
 model EvaluationPeriod {

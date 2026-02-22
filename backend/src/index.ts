@@ -8,6 +8,9 @@ import evaluationPeriodRoutes from './routes/evaluationPeriodRoutes';
 import evaluationRoutes from './routes/evaluationRoutes';
 import groupScoreRoutes from './routes/groupScoreRoutes';
 import kpiRoutes from './routes/kpiRoutes';
+import adminRoutes from './routes/adminRoutes';
+import operatorRoutes from './routes/operatorRoutes';
+import approvalRoutes from './routes/approvalRoutes';
 
 dotenv.config();
 
@@ -27,6 +30,9 @@ app.use('/api/evaluation-periods', evaluationPeriodRoutes);
 app.use('/api/evaluations', evaluationRoutes);
 app.use('/api/group-scores', groupScoreRoutes);
 app.use('/api/kpis', kpiRoutes);
+app.use('/api/admins', adminRoutes);
+app.use('/api/operator', operatorRoutes);
+app.use('/api/approvals', approvalRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });

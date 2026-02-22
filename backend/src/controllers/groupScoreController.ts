@@ -193,7 +193,7 @@ export const getGroupScores = async (req: AuthRequest, res: Response) => {
     });
 
     if (!period) {
-      return res.status(404).json({ error: 'Period not found' });
+      return res.status(404).json({ error: 'Период не найден' });
     }
 
     // Build group hierarchy
@@ -213,7 +213,7 @@ export const getGroupScores = async (req: AuthRequest, res: Response) => {
     res.json({ period, groups: resultTree });
   } catch (error) {
     console.error('Get group scores error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 };
 
@@ -271,7 +271,7 @@ export const getGroupScoreDetails = async (req: AuthRequest, res: Response) => {
     });
 
     if (!group) {
-      return res.status(404).json({ error: 'Group not found' });
+      return res.status(404).json({ error: 'Группа не найдена' });
     }
 
     const period = await prisma.evaluationPeriod.findUnique({
@@ -311,7 +311,7 @@ export const getGroupScoreDetails = async (req: AuthRequest, res: Response) => {
     });
   } catch (error) {
     console.error('Get group score details error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 };
 
@@ -350,7 +350,7 @@ export const getGroupScoresSummary = async (req: AuthRequest, res: Response) => 
     });
 
     if (!period) {
-      return res.status(404).json({ error: 'Period not found' });
+      return res.status(404).json({ error: 'Период не найден' });
     }
 
     // Get all evaluations for the period
@@ -453,7 +453,7 @@ export const getGroupScoresSummary = async (req: AuthRequest, res: Response) => 
     });
   } catch (error) {
     console.error('Get group scores summary error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 };
 
@@ -463,7 +463,7 @@ export const calculateGroupScores = async (req: AuthRequest, res: Response) => {
     const { periodId } = req.body;
 
     if (!periodId) {
-      return res.status(400).json({ error: 'Period ID is required' });
+      return res.status(400).json({ error: 'ID периода обязателен' });
     }
 
     const period = await prisma.evaluationPeriod.findUnique({
@@ -471,7 +471,7 @@ export const calculateGroupScores = async (req: AuthRequest, res: Response) => {
     });
 
     if (!period) {
-      return res.status(404).json({ error: 'Period not found' });
+      return res.status(404).json({ error: 'Период не найден' });
     }
 
     // Build group hierarchy
@@ -514,12 +514,12 @@ export const calculateGroupScores = async (req: AuthRequest, res: Response) => {
     }
 
     res.json({
-      message: 'Group scores calculated successfully',
+      message: 'Оценки групп успешно рассчитаны',
       count: savedScores.length,
       scores: savedScores,
     });
   } catch (error) {
     console.error('Calculate group scores error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 };
