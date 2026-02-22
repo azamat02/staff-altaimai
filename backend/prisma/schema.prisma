@@ -19,6 +19,13 @@ enum ApprovalStatus {
   REJECTED
 }
 
+model Block {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  groups    Group[]
+  createdAt DateTime @default(now())
+}
+
 model Group {
   id              Int             @id @default(autoincrement())
   name            String          @unique
@@ -30,6 +37,8 @@ model Group {
   createdByAdminId Int?
   createdByAdmin  Admin?          @relation("GroupCreator", fields: [createdByAdminId], references: [id])
   rejectionReason String?
+  blockId         Int?
+  block           Block?          @relation(fields: [blockId], references: [id], onDelete: SetNull)
   createdAt       DateTime        @default(now())
 }
 

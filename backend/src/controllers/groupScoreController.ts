@@ -12,6 +12,8 @@ interface GroupNode {
     position: string;
     managerId: number | null;
   } | null;
+  blockId: number | null;
+  blockName: string | null;
   parentGroupId: number | null;
   children: GroupNode[];
 }
@@ -24,6 +26,8 @@ interface GroupScoreResult {
   score: number | null;
   userCount: number;
   isLeaf: boolean;
+  type?: 'block' | 'group';
+  blockName?: string | null;
   children: GroupScoreResult[];
 }
 
@@ -39,6 +43,12 @@ async function buildGroupHierarchy(): Promise<Map<number, GroupNode>> {
           managerId: true,
         },
       },
+      block: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
     },
   });
 
@@ -51,6 +61,8 @@ async function buildGroupHierarchy(): Promise<Map<number, GroupNode>> {
       name: group.name,
       leaderId: group.leaderId,
       leader: group.leader,
+      blockId: group.block?.id || null,
+      blockName: group.block?.name || null,
       parentGroupId: null,
       children: [],
     });
@@ -162,6 +174,8 @@ function buildResultTree(
     score: scoreData.score,
     userCount: scoreData.userCount,
     isLeaf: scoreData.isLeaf,
+    type: 'group',
+    blockName: groupNode.blockName,
     children: groupNode.children.map((child) => buildResultTree(child, scoresCache)),
   };
 }
@@ -210,7 +224,47 @@ export const getGroupScores = async (req: AuthRequest, res: Response) => {
     // Build result tree
     const resultTree = rootGroups.map((root) => buildResultTree(root, scoresCache));
 
-    res.json({ period, groups: resultTree });
+    // Wrap root groups into block-level synthetic nodes
+    const blockMap = new Map<number, { name: string; children: GroupScoreResult[] }>();
+    const noBlockGroups: GroupScoreResult[] = [];
+
+    for (const node of resultTree) {
+      const rootGroupNode = groupMap.get(node.groupId)!;
+      if (rootGroupNode.blockId && rootGroupNode.blockName) {
+        if (!blockMap.has(rootGroupNode.blockId)) {
+          blockMap.set(rootGroupNode.blockId, { name: rootGroupNode.blockName, children: [] });
+        }
+        blockMap.get(rootGroupNode.blockId)!.children.push(node);
+      } else {
+        noBlockGroups.push(node);
+      }
+    }
+
+    // Build block-level nodes with aggregated scores
+    const blockNodes: GroupScoreResult[] = [];
+    for (const [blockId, blockData] of blockMap.entries()) {
+      const validScores = blockData.children.filter((c) => c.score !== null);
+      const blockScore = validScores.length > 0
+        ? Math.round((validScores.reduce((sum, c) => sum + c.score!, 0) / validScores.length) * 100) / 100
+        : null;
+      const totalUsers = blockData.children.reduce((sum, c) => sum + c.userCount, 0);
+
+      blockNodes.push({
+        groupId: -blockId, // negative to avoid ID collision with real groups
+        groupName: blockData.name,
+        leaderId: null,
+        leaderName: null,
+        score: blockScore,
+        userCount: totalUsers,
+        isLeaf: false,
+        type: 'block',
+        children: blockData.children,
+      });
+    }
+
+    const finalTree = [...blockNodes, ...noBlockGroups];
+
+    res.json({ period, groups: finalTree });
   } catch (error) {
     console.error('Get group scores error:', error);
     res.status(500).json({ error: 'Внутренняя ошибка сервера' });
@@ -404,6 +458,12 @@ export const getGroupScoresSummary = async (req: AuthRequest, res: Response) => 
             position: true,
           },
         },
+        block: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
         users: {
           select: {
             id: true,
@@ -432,6 +492,7 @@ export const getGroupScoresSummary = async (req: AuthRequest, res: Response) => 
         id: group.id,
         name: group.name,
         leader: group.leader?.fullName || null,
+        blockName: group.block?.name || null,
         userCount: group.users.length,
         evaluatedCount: group.users.filter((u) => u.evaluationsReceived.length > 0).length,
         score: groupScore,

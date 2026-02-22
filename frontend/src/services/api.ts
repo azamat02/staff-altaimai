@@ -62,12 +62,22 @@ export interface User {
   updatedAt: string;
 }
 
+export interface Block {
+  id: number;
+  name: string;
+  createdAt: string;
+  groups?: { id: number; name: string }[];
+  _count?: { groups: number };
+}
+
 export interface Group {
   id: number;
   name: string;
   leaderId: number | null;
   leader?: { id: number; fullName: string; position: string } | null;
   users?: { id: number; fullName: string; position: string }[];
+  blockId?: number | null;
+  block?: { id: number; name: string } | null;
   approvalStatus?: ApprovalStatus;
   rejectionReason?: string | null;
   createdByAdminId?: number | null;
@@ -148,12 +158,20 @@ export const usersApi = {
 export interface UpdateGroupData {
   name?: string;
   leaderId?: number | null;
+  blockId?: number | null;
 }
+
+export const blocksApi = {
+  getAll: () => api.get<Block[]>('/blocks'),
+  create: (name: string) => api.post<Block>('/blocks', { name }),
+  update: (id: number, name: string) => api.put<Block>(`/blocks/${id}`, { name }),
+  delete: (id: number) => api.delete(`/blocks/${id}`),
+};
 
 export const groupsApi = {
   getAll: () => api.get<Group[]>('/groups'),
   getOne: (id: number) => api.get<Group>(`/groups/${id}`),
-  create: (name: string) => api.post<Group>('/groups', { name }),
+  create: (name: string, blockId?: number | null) => api.post<Group>('/groups', { name, blockId }),
   update: (id: number, data: UpdateGroupData) => api.put<Group>(`/groups/${id}`, data),
   delete: (id: number) => api.delete(`/groups/${id}`),
 };
@@ -284,6 +302,8 @@ export interface GroupScoreResult {
   score: number | null;
   userCount: number;
   isLeaf: boolean;
+  type?: 'block' | 'group';
+  blockName?: string | null;
   children: GroupScoreResult[];
 }
 
@@ -335,6 +355,7 @@ export interface GroupSummaryItem {
   id: number;
   name: string;
   leader: string | null;
+  blockName?: string | null;
   userCount: number;
   evaluatedCount: number;
   score: number | null;
@@ -615,7 +636,7 @@ export const operatorApi = {
   createUser: (data: CreatePendingUserData) => api.post<User>('/operator/users', data),
   getGroups: () => api.get<Group[]>('/operator/groups'),
   createGroup: (name: string) => api.post<Group>('/operator/groups', { name }),
-  getApprovedGroups: () => api.get<{ id: number; name: string }[]>('/operator/approved-groups'),
+  getApprovedGroups: () => api.get<{ id: number; name: string; block?: { id: number; name: string } | null }[]>('/operator/approved-groups'),
 };
 
 // ==================== Approvals API ====================

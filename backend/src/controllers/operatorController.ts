@@ -188,6 +188,12 @@ export const getApprovedGroups = async (req: AuthRequest, res: Response) => {
       select: {
         id: true,
         name: true,
+        block: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
       },
       orderBy: { name: 'asc' },
     });

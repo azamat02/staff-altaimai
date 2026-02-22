@@ -54,18 +54,25 @@ interface GroupTreeNodeProps {
   onShowDetails: (groupId: number) => void;
 }
 
+const BlockIcon = () => (
+  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+  </svg>
+);
+
 const GroupTreeNode: React.FC<GroupTreeNodeProps> = ({ group, level, onShowDetails }) => {
   const [isExpanded, setIsExpanded] = useState(level === 0);
   const hasChildren = group.children.length > 0;
+  const isBlock = group.type === 'block';
 
   return (
     <div>
       <div
         className={`flex items-center justify-between py-3 px-4 hover:bg-slate-50 cursor-pointer border-b border-slate-100 ${
-          level === 0 ? 'bg-slate-50' : ''
+          isBlock ? 'bg-gold-50/50' : level === 0 ? 'bg-slate-50' : ''
         }`}
         style={{ paddingLeft: `${1 + level * 1.5}rem` }}
-        onClick={() => hasChildren ? setIsExpanded(!isExpanded) : onShowDetails(group.groupId)}
+        onClick={() => hasChildren ? setIsExpanded(!isExpanded) : (!isBlock && onShowDetails(group.groupId))}
       >
         <div className="flex items-center space-x-3">
           {hasChildren ? (
@@ -82,8 +89,11 @@ const GroupTreeNode: React.FC<GroupTreeNodeProps> = ({ group, level, onShowDetai
             <div className="w-6" />
           )}
           <div>
-            <div className="font-medium text-slate-900">{group.groupName}</div>
-            {group.leaderName && (
+            <div className={`flex items-center space-x-2 ${isBlock ? 'font-bold text-slate-900' : 'font-medium text-slate-900'}`}>
+              {isBlock && <BlockIcon />}
+              <span>{group.groupName}</span>
+            </div>
+            {!isBlock && group.leaderName && (
               <div className="text-sm text-slate-500">Руководитель: {group.leaderName}</div>
             )}
           </div>
@@ -98,7 +108,7 @@ const GroupTreeNode: React.FC<GroupTreeNodeProps> = ({ group, level, onShowDetai
           >
             {group.score !== null ? group.score.toFixed(2) : '—'}
           </div>
-          {group.isLeaf && (
+          {!isBlock && group.isLeaf && (
             <button
               onClick={(e) => {
                 e.stopPropagation();

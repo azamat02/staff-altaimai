@@ -11,6 +11,7 @@ import kpiRoutes from './routes/kpiRoutes';
 import adminRoutes from './routes/adminRoutes';
 import operatorRoutes from './routes/operatorRoutes';
 import approvalRoutes from './routes/approvalRoutes';
+import blockRoutes from './routes/blockRoutes';
 
 dotenv.config();
 
@@ -33,6 +34,7 @@ app.use('/api/kpis', kpiRoutes);
 app.use('/api/admins', adminRoutes);
 app.use('/api/operator', operatorRoutes);
 app.use('/api/approvals', approvalRoutes);
+app.use('/api/blocks', blockRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });

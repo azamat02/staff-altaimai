@@ -215,8 +215,9 @@ const ScoringReportPage: React.FC = () => {
 
     // Groups sheet
     const groupsData = [
-      ['Группа', 'Руководитель', 'Всего сотрудников', 'Оценено', 'Средний балл', 'Категория'],
+      ['Блок', 'Группа', 'Руководитель', 'Всего сотрудников', 'Оценено', 'Средний балл', 'Категория'],
       ...groups.map((g) => [
+        g.blockName || '—',
         g.name,
         g.leader || '—',
         g.userCount,
@@ -298,8 +299,9 @@ const ScoringReportPage: React.FC = () => {
     // Groups table
     autoTable(doc, {
       startY: 112,
-      head: [['Группа', 'Руководитель', 'Всего', 'Оценено', 'Балл', 'Категория']],
+      head: [['Блок', 'Группа', 'Руководитель', 'Всего', 'Оценено', 'Балл', 'Категория']],
       body: groups.map((g) => [
+        g.blockName || '—',
         g.name,
         g.leader || '—',
         g.userCount,
@@ -482,6 +484,9 @@ const ScoringReportPage: React.FC = () => {
                   <thead>
                     <tr className="bg-slate-50 border-b border-slate-100">
                       <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-6 py-3">
+                        Блок
+                      </th>
+                      <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-6 py-3">
                         Группа
                       </th>
                       <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-6 py-3">
@@ -504,13 +509,14 @@ const ScoringReportPage: React.FC = () => {
                   <tbody className="divide-y divide-slate-100">
                     {groups.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
+                        <td colSpan={7} className="px-6 py-12 text-center text-slate-500">
                           Нет данных по группам
                         </td>
                       </tr>
                     ) : (
                       groups.map((group) => (
                         <tr key={group.id} className="hover:bg-slate-50">
+                          <td className="px-6 py-4 text-slate-600">{group.blockName || '—'}</td>
                           <td className="px-6 py-4 font-medium text-slate-900">{group.name}</td>
                           <td className="px-6 py-4 text-slate-600">{group.leader || '—'}</td>
                           <td className="px-6 py-4 text-center text-slate-600">{group.userCount}</td>

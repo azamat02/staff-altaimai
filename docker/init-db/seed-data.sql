@@ -12,6 +12,11 @@ INSERT INTO "EvaluationPeriod" (id, name, "startDate", "endDate", "isActive", "c
 (1, 'Q1', '2026-01-31 00:00:00', '2026-02-07 00:00:00', true, '2026-01-30 19:49:27.734')
 ON CONFLICT (id) DO NOTHING;
 
+-- Blocks
+INSERT INTO "Block" (id, name, "createdAt") VALUES
+(1, 'АУП', '2026-01-30 15:40:00.000')
+ON CONFLICT (id) DO NOTHING;
+
 -- Groups (without leaderId first)
 INSERT INTO "Group" (id, name, "createdAt", "leaderId") VALUES
 (5, 'Правление', '2026-01-30 15:43:28.565', NULL),
@@ -79,6 +84,9 @@ INSERT INTO "User" (id, "fullName", position, "groupId", "managerId", "createdAt
 (50, 'Елемес Дарын Дәуренұлы', 'Главный менеджер', 16, 46, '2026-01-30 19:27:47.308', '2026-01-30 19:27:47.308', false, NULL, true, false, NULL)
 ON CONFLICT (id) DO NOTHING;
 
+-- Assign groups to blocks
+UPDATE "Group" SET "blockId" = 1 WHERE id IN (5, 6, 7);
+
 -- Update Group leaders
 UPDATE "Group" SET "leaderId" = 7 WHERE id = 5;
 UPDATE "Group" SET "leaderId" = 39 WHERE id = 6;
@@ -120,6 +128,7 @@ INSERT INTO "KpiTask" (id, name, weight, "order", "createdAt", "updatedAt", "blo
 ON CONFLICT (id) DO NOTHING;
 
 -- Reset sequences
+SELECT setval('"Block_id_seq"', COALESCE((SELECT MAX(id) FROM "Block"), 1));
 SELECT setval('"Admin_id_seq"', COALESCE((SELECT MAX(id) FROM "Admin"), 1));
 SELECT setval('"Group_id_seq"', COALESCE((SELECT MAX(id) FROM "Group"), 1));
 SELECT setval('"User_id_seq"', COALESCE((SELECT MAX(id) FROM "User"), 1));

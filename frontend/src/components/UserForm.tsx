@@ -186,11 +186,11 @@ const UserForm: React.FC<UserFormProps> = ({
     };
   }, [users, user?.id, selectedGroupId]);
 
-  // Group options for searchable select
+  // Group options for searchable select (with block prefix)
   const groupOptions = useMemo(() => {
     return groups.map((group) => ({
       value: group.id,
-      label: group.name,
+      label: group.block ? `${group.block.name} > ${group.name}` : group.name,
     }));
   }, [groups]);
 

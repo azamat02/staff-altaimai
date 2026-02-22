@@ -14,6 +14,12 @@ export const getGroups = async (req: Request, res: Response) => {
             position: true,
           },
         },
+        block: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
         _count: {
           select: { users: { where: { approvalStatus: 'APPROVED' } } },
         },
@@ -40,6 +46,12 @@ export const getGroup = async (req: Request, res: Response) => {
             position: true,
           },
         },
+        block: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
         users: {
           select: {
             id: true,
@@ -63,7 +75,7 @@ export const getGroup = async (req: Request, res: Response) => {
 
 export const createGroup = async (req: AuthRequest, res: Response) => {
   try {
-    const { name } = req.body;
+    const { name, blockId } = req.body;
 
     if (!name) {
       return res.status(400).json({ error: 'Название группы обязательно' });
@@ -77,9 +89,18 @@ export const createGroup = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'Группа с таким названием уже существует' });
     }
 
+    // Validate blockId if provided
+    if (blockId) {
+      const block = await prisma.block.findUnique({ where: { id: blockId } });
+      if (!block) {
+        return res.status(400).json({ error: 'Блок не найден' });
+      }
+    }
+
     const group = await prisma.group.create({
       data: {
         name,
+        blockId: blockId || null,
         approvalStatus: 'APPROVED',
         createdByAdminId: req.adminId || null,
       },
@@ -95,7 +116,7 @@ export const createGroup = async (req: AuthRequest, res: Response) => {
 export const updateGroup = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { name, leaderId } = req.body;
+    const { name, leaderId, blockId } = req.body;
 
     const existingGroup = await prisma.group.findUnique({
       where: { id: parseInt(id) },
@@ -135,11 +156,20 @@ export const updateGroup = async (req: Request, res: Response) => {
       }
     }
 
+    // Validate blockId if provided (and not null)
+    if (blockId !== undefined && blockId !== null) {
+      const block = await prisma.block.findUnique({ where: { id: blockId } });
+      if (!block) {
+        return res.status(400).json({ error: 'Блок не найден' });
+      }
+    }
+
     const group = await prisma.group.update({
       where: { id: parseInt(id) },
       data: {
         name: name || existingGroup.name,
         leaderId: leaderId === null ? null : (leaderId ?? existingGroup.leaderId),
+        blockId: blockId === null ? null : (blockId !== undefined ? blockId : existingGroup.blockId),
       },
       include: {
         leader: {

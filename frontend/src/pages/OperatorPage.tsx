@@ -25,7 +25,7 @@ const OperatorPage: React.FC = () => {
   const [dashboard, setDashboard] = useState<OperatorDashboard | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
-  const [approvedGroups, setApprovedGroups] = useState<{ id: number; name: string }[]>([]);
+  const [approvedGroups, setApprovedGroups] = useState<{ id: number; name: string; block?: { id: number; name: string } | null }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -420,7 +420,7 @@ const OperatorPage: React.FC = () => {
                     >
                       <option value={0}>Выберите группу</option>
                       {approvedGroups.map((g) => (
-                        <option key={g.id} value={g.id}>{g.name}</option>
+                        <option key={g.id} value={g.id}>{g.block ? `${g.block.name} > ${g.name}` : g.name}</option>
                       ))}
                     </select>
                   </div>
