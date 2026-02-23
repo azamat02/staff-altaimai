@@ -15,6 +15,8 @@ import KpiFillPage from './pages/KpiFillPage';
 import AdminsPage from './pages/AdminsPage';
 import OperatorPage from './pages/OperatorPage';
 import ApprovalsPage from './pages/ApprovalsPage';
+import AuditLogPage from './pages/AuditLogPage';
+import ForceChangePasswordPage from './pages/ForceChangePasswordPage';
 
 // Protected route для админов
 const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -40,9 +42,9 @@ const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return <>{children}</>;
 };
 
-// Protected route для операторов
+// Protected route для операторов (Admin-OPERATOR или User с isOperator)
 const OperatorRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated, isLoading, role } = useAuth();
+  const { isAuthenticated, isLoading, role, user } = useAuth();
 
   if (isLoading) {
     return (
@@ -56,7 +58,7 @@ const OperatorRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     return <Navigate to="/login" replace />;
   }
 
-  if (role !== 'operator') {
+  if (role !== 'operator' && !(role === 'user' && user?.isOperator)) {
     if (role === 'admin') return <Navigate to="/users" replace />;
     return <Navigate to="/portal" replace />;
   }
@@ -89,7 +91,7 @@ const UserRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 };
 
 const App: React.FC = () => {
-  const { isAuthenticated, isLoading, role } = useAuth();
+  const { isAuthenticated, isLoading, role, mustChangePassword } = useAuth();
 
   if (isLoading) {
     return (
@@ -97,6 +99,11 @@ const App: React.FC = () => {
         <div className="text-gray-500">Загрузка...</div>
       </div>
     );
+  }
+
+  // Guard: forced password change
+  if (isAuthenticated && mustChangePassword) {
+    return <ForceChangePasswordPage />;
   }
 
   // Определение редиректа после авторизации
@@ -190,6 +197,14 @@ const App: React.FC = () => {
         element={
           <AdminRoute>
             <ApprovalsPage />
+          </AdminRoute>
+        }
+      />
+      <Route
+        path="/audit-log"
+        element={
+          <AdminRoute>
+            <AuditLogPage />
           </AdminRoute>
         }
       />

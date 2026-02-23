@@ -247,9 +247,9 @@ const ApprovalsPage: React.FC = () => {
                         <button
                           onClick={() => setRejectTarget({ type: 'group', id: group.id, name: group.name })}
                           disabled={processingId === group.id}
-                          className="px-3 py-1.5 text-xs font-medium text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition-colors disabled:opacity-50"
+                          className="px-3 py-1.5 text-xs font-medium text-orange-700 bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors disabled:opacity-50"
                         >
-                          Отклонить
+                          На доработку
                         </button>
                       </div>
                     </td>
@@ -261,41 +261,81 @@ const ApprovalsPage: React.FC = () => {
         </div>
       )}
 
-      {/* Reject Modal */}
+      {/* Reject / Revision Modal */}
       {rejectTarget && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={() => { setRejectTarget(null); setRejectReason(''); }} />
           <div className="relative min-h-screen flex items-center justify-center p-4">
             <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
-              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-semibold text-slate-900 text-center mb-2">
-                Отклонить заявку?
-              </h3>
-              <p className="text-sm text-slate-500 text-center mb-4">
-                {rejectTarget.name}
-              </p>
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-slate-700 mb-1">Причина отклонения (необязательно)</label>
-                <textarea
-                  value={rejectReason}
-                  onChange={(e) => setRejectReason(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-transparent resize-none"
-                  rows={3}
-                  placeholder="Укажите причину..."
-                />
-              </div>
-              <div className="flex items-center space-x-3">
-                <button onClick={() => { setRejectTarget(null); setRejectReason(''); }} className="btn-secondary flex-1">
-                  Отмена
-                </button>
-                <button onClick={handleReject} disabled={isRejecting} className="btn-danger flex-1">
-                  {isRejecting ? 'Отклонение...' : 'Отклонить'}
-                </button>
-              </div>
+              {rejectTarget.type === 'group' ? (
+                <>
+                  <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-semibold text-slate-900 text-center mb-2">
+                    Вернуть на доработку?
+                  </h3>
+                  <p className="text-sm text-slate-500 text-center mb-4">
+                    {rejectTarget.name}
+                  </p>
+                  <div className="mb-6">
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Комментарий для оператора</label>
+                    <textarea
+                      value={rejectReason}
+                      onChange={(e) => setRejectReason(e.target.value)}
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-transparent resize-none"
+                      rows={3}
+                      placeholder="Укажите что нужно исправить..."
+                    />
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <button onClick={() => { setRejectTarget(null); setRejectReason(''); }} className="btn-secondary flex-1">
+                      Отмена
+                    </button>
+                    <button
+                      onClick={handleReject}
+                      disabled={isRejecting}
+                      className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 rounded-xl transition-colors disabled:opacity-50"
+                    >
+                      {isRejecting ? 'Возврат...' : 'Вернуть'}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-semibold text-slate-900 text-center mb-2">
+                    Отклонить заявку?
+                  </h3>
+                  <p className="text-sm text-slate-500 text-center mb-4">
+                    {rejectTarget.name}
+                  </p>
+                  <div className="mb-6">
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Причина отклонения (необязательно)</label>
+                    <textarea
+                      value={rejectReason}
+                      onChange={(e) => setRejectReason(e.target.value)}
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-transparent resize-none"
+                      rows={3}
+                      placeholder="Укажите причину..."
+                    />
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <button onClick={() => { setRejectTarget(null); setRejectReason(''); }} className="btn-secondary flex-1">
+                      Отмена
+                    </button>
+                    <button onClick={handleReject} disabled={isRejecting} className="btn-danger flex-1">
+                      {isRejecting ? 'Отклонение...' : 'Отклонить'}
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>

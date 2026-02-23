@@ -3,6 +3,7 @@ import bcrypt from 'bcrypt';
 import prisma from '../config/database';
 import { AuthRequest } from '../middleware/authMiddleware';
 import { generatePassword, generateLogin } from '../utils/helpers';
+import { logAudit } from '../utils/auditLog';
 
 // GET /api/approvals/pending — Все PENDING users и groups
 export const getPendingItems = async (req: AuthRequest, res: Response) => {
@@ -78,6 +79,7 @@ export const approveUser = async (req: AuthRequest, res: Response) => {
         approvalStatus: 'APPROVED',
         login,
         passwordHash,
+        ...(passwordHash ? { mustChangePassword: true } : {}),
       },
       include: {
         group: true,
@@ -85,6 +87,13 @@ export const approveUser = async (req: AuthRequest, res: Response) => {
           select: { id: true, fullName: true, position: true },
         },
       },
+    });
+
+    await logAudit(req, {
+      action: 'USER_APPROVE',
+      targetType: 'User',
+      targetId: updatedUser.id,
+      targetName: updatedUser.fullName,
     });
 
     res.json({
@@ -126,6 +135,14 @@ export const rejectUser = async (req: AuthRequest, res: Response) => {
       },
     });
 
+    await logAudit(req, {
+      action: 'USER_REJECT',
+      targetType: 'User',
+      targetId: updatedUser.id,
+      targetName: updatedUser.fullName,
+      details: reason ? { reason } : undefined,
+    });
+
     res.json(updatedUser);
   } catch (error) {
     console.error('Reject user error:', error);
@@ -159,6 +176,13 @@ export const approveGroup = async (req: AuthRequest, res: Response) => {
       },
     });
 
+    await logAudit(req, {
+      action: 'GROUP_APPROVE',
+      targetType: 'Group',
+      targetId: updatedGroup.id,
+      targetName: updatedGroup.name,
+    });
+
     res.json(updatedGroup);
   } catch (error) {
     console.error('Approve group error:', error);
@@ -166,7 +190,7 @@ export const approveGroup = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// POST /api/approvals/groups/:id/reject — Отклонить группу
+// POST /api/approvals/groups/:id/reject — Вернуть группу на доработку
 export const rejectGroup = async (req: AuthRequest, res: Response) => {
   try {
     const id = parseInt(req.params.id);
@@ -186,24 +210,20 @@ export const rejectGroup = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'Группа не ожидает одобрения' });
     }
 
-    // Каскадный reject связанных pending users
-    await prisma.user.updateMany({
-      where: {
-        groupId: id,
-        approvalStatus: 'PENDING',
-      },
-      data: {
-        approvalStatus: 'REJECTED',
-        rejectionReason: 'Группа была отклонена',
-      },
-    });
-
     const updatedGroup = await prisma.group.update({
       where: { id },
       data: {
-        approvalStatus: 'REJECTED',
+        approvalStatus: 'REVISION',
         rejectionReason: reason || null,
       },
+    });
+
+    await logAudit(req, {
+      action: 'GROUP_REJECT',
+      targetType: 'Group',
+      targetId: updatedGroup.id,
+      targetName: updatedGroup.name,
+      details: reason ? { reason } : undefined,
     });
 
     res.json(updatedGroup);

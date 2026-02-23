@@ -1,33 +1,48 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { operatorApi, OperatorDashboard, User, Group, CreatePendingUserData } from '../services/api';
+import { operatorApi, OperatorDashboard, User, Group, CreatePendingUserData, ApprovalStatus } from '../services/api';
 
 type Tab = 'dashboard' | 'users' | 'groups';
 
 const statusBadge = (status?: string) => {
   switch (status) {
+    case 'DRAFT':
+      return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600">Черновик</span>;
     case 'PENDING':
       return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">На рассмотрении</span>;
     case 'APPROVED':
       return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">Одобрено</span>;
     case 'REJECTED':
       return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Отклонено</span>;
+    case 'REVISION':
+      return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">На доработке</span>;
     default:
       return null;
   }
 };
 
 const OperatorPage: React.FC = () => {
-  const { admin, logout } = useAuth();
+  const { admin, user, role, logout } = useAuth();
   const navigate = useNavigate();
+
+  // Для User-оператора показываем его имя, для Admin-оператора — username
+  const displayName = role === 'user' ? user?.fullName : admin?.username;
+  const displayInitial = displayName?.charAt(0).toUpperCase() || '?';
+  const isUserOperator = role === 'user' && user?.isOperator;
   const [tab, setTab] = useState<Tab>('dashboard');
   const [dashboard, setDashboard] = useState<OperatorDashboard | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
-  const [approvedGroups, setApprovedGroups] = useState<{ id: number; name: string; block?: { id: number; name: string } | null }[]>([]);
+  const [approvedGroups, setApprovedGroups] = useState<{ id: number; name: string; approvalStatus?: ApprovalStatus; block?: { id: number; name: string } | null }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Edit group inline
+  const [editingGroupId, setEditingGroupId] = useState<number | null>(null);
+  const [editGroupName, setEditGroupName] = useState('');
+  const [isEditingGroup, setIsEditingGroup] = useState(false);
+  const [isSubmittingGroup, setIsSubmittingGroup] = useState<number | null>(null);
 
   // Create user modal
   const [showCreateUser, setShowCreateUser] = useState(false);
@@ -134,6 +149,33 @@ const OperatorPage: React.FC = () => {
     }
   };
 
+  const handleEditGroup = async (groupId: number) => {
+    if (!editGroupName.trim()) return;
+    try {
+      setIsEditingGroup(true);
+      await operatorApi.updateGroup(groupId, editGroupName.trim());
+      setEditingGroupId(null);
+      setEditGroupName('');
+      await refreshAll();
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Ошибка редактирования группы');
+    } finally {
+      setIsEditingGroup(false);
+    }
+  };
+
+  const handleSubmitGroup = async (groupId: number) => {
+    try {
+      setIsSubmittingGroup(groupId);
+      await operatorApi.submitGroup(groupId);
+      await refreshAll();
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Ошибка отправки группы');
+    } finally {
+      setIsSubmittingGroup(null);
+    }
+  };
+
   const tabs: { key: Tab; label: string }[] = [
     { key: 'dashboard', label: 'Дашборд' },
     { key: 'users', label: 'Пользователи' },
@@ -176,13 +218,24 @@ const OperatorPage: React.FC = () => {
               </div>
             </div>
             <div className="flex items-center space-x-4">
+              {isUserOperator && (
+                <button
+                  onClick={() => navigate('/portal')}
+                  className="flex items-center space-x-2 px-3 py-2 text-sm font-medium text-white/70 hover:text-gold-500 hover:bg-white/10 rounded-lg transition-colors"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                  </svg>
+                  <span className="hidden sm:inline">Мой портал</span>
+                </button>
+              )}
               <div className="hidden sm:flex items-center space-x-3">
                 <div className="w-8 h-8 bg-gold-500/20 rounded-full flex items-center justify-center">
                   <span className="text-sm font-medium text-gold-500">
-                    {admin?.username?.charAt(0).toUpperCase()}
+                    {displayInitial}
                   </span>
                 </div>
-                <span className="text-sm font-medium text-white/80">{admin?.username}</span>
+                <span className="text-sm font-medium text-white/80">{displayName}</span>
               </div>
               <button
                 onClick={handleLogout}
@@ -238,18 +291,22 @@ const OperatorPage: React.FC = () => {
                 {/* Groups stats */}
                 <div className="card p-6">
                   <h2 className="text-lg font-semibold text-slate-900 mb-4">Группы</h2>
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-4 gap-4">
+                    <div className="text-center">
+                      <p className="text-2xl font-semibold text-slate-500">{dashboard.groups.draft}</p>
+                      <p className="text-xs text-slate-500 mt-1">Черновик</p>
+                    </div>
                     <div className="text-center">
                       <p className="text-2xl font-semibold text-amber-600">{dashboard.groups.pending}</p>
                       <p className="text-xs text-slate-500 mt-1">На рассмотрении</p>
                     </div>
                     <div className="text-center">
-                      <p className="text-2xl font-semibold text-emerald-600">{dashboard.groups.approved}</p>
-                      <p className="text-xs text-slate-500 mt-1">Одобрено</p>
+                      <p className="text-2xl font-semibold text-orange-600">{dashboard.groups.revision}</p>
+                      <p className="text-xs text-slate-500 mt-1">На доработке</p>
                     </div>
                     <div className="text-center">
-                      <p className="text-2xl font-semibold text-red-600">{dashboard.groups.rejected}</p>
-                      <p className="text-xs text-slate-500 mt-1">Отклонено</p>
+                      <p className="text-2xl font-semibold text-emerald-600">{dashboard.groups.approved}</p>
+                      <p className="text-xs text-slate-500 mt-1">Одобрено</p>
                     </div>
                   </div>
                 </div>
@@ -338,30 +395,88 @@ const OperatorPage: React.FC = () => {
                       <tr className="border-b border-slate-100">
                         <th className="text-left px-6 py-4 text-xs font-medium text-slate-500 uppercase tracking-wider">Название</th>
                         <th className="text-left px-6 py-4 text-xs font-medium text-slate-500 uppercase tracking-wider">Статус</th>
+                        <th className="text-left px-6 py-4 text-xs font-medium text-slate-500 uppercase tracking-wider">Комментарий</th>
                         <th className="text-left px-6 py-4 text-xs font-medium text-slate-500 uppercase tracking-wider">Дата</th>
+                        <th className="text-right px-6 py-4 text-xs font-medium text-slate-500 uppercase tracking-wider">Действия</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50">
                       {groups.length === 0 ? (
                         <tr>
-                          <td colSpan={3} className="px-6 py-12 text-center text-sm text-slate-400">
+                          <td colSpan={5} className="px-6 py-12 text-center text-sm text-slate-400">
                             Нет групп
                           </td>
                         </tr>
-                      ) : groups.map((group) => (
-                        <tr key={group.id} className="hover:bg-slate-50/50 transition-colors">
-                          <td className="px-6 py-4 text-sm font-medium text-slate-900">{group.name}</td>
-                          <td className="px-6 py-4">
-                            {statusBadge(group.approvalStatus)}
-                            {group.approvalStatus === 'REJECTED' && group.rejectionReason && (
-                              <p className="text-xs text-red-500 mt-1">{group.rejectionReason}</p>
-                            )}
-                          </td>
-                          <td className="px-6 py-4 text-sm text-slate-500">
-                            {new Date(group.createdAt).toLocaleDateString('ru-RU')}
-                          </td>
-                        </tr>
-                      ))}
+                      ) : groups.map((group) => {
+                        const isEditable = group.approvalStatus === 'DRAFT' || group.approvalStatus === 'REVISION';
+                        const isEditing = editingGroupId === group.id;
+                        return (
+                          <tr key={group.id} className="hover:bg-slate-50/50 transition-colors">
+                            <td className="px-6 py-4 text-sm font-medium text-slate-900">
+                              {isEditing ? (
+                                <div className="flex items-center space-x-2">
+                                  <input
+                                    type="text"
+                                    value={editGroupName}
+                                    onChange={(e) => setEditGroupName(e.target.value)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') handleEditGroup(group.id);
+                                      if (e.key === 'Escape') { setEditingGroupId(null); setEditGroupName(''); }
+                                    }}
+                                    className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-transparent"
+                                    autoFocus
+                                  />
+                                  <button
+                                    onClick={() => handleEditGroup(group.id)}
+                                    disabled={isEditingGroup}
+                                    className="px-2 py-1 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors disabled:opacity-50"
+                                  >
+                                    {isEditingGroup ? '...' : 'OK'}
+                                  </button>
+                                  <button
+                                    onClick={() => { setEditingGroupId(null); setEditGroupName(''); }}
+                                    className="px-2 py-1 text-xs font-medium text-slate-500 bg-slate-50 hover:bg-slate-100 rounded-lg transition-colors"
+                                  >
+                                    Отмена
+                                  </button>
+                                </div>
+                              ) : (
+                                group.name
+                              )}
+                            </td>
+                            <td className="px-6 py-4">
+                              {statusBadge(group.approvalStatus)}
+                            </td>
+                            <td className="px-6 py-4 text-sm text-slate-500">
+                              {group.rejectionReason ? (
+                                <span className="text-orange-600">{group.rejectionReason}</span>
+                              ) : '—'}
+                            </td>
+                            <td className="px-6 py-4 text-sm text-slate-500">
+                              {new Date(group.createdAt).toLocaleDateString('ru-RU')}
+                            </td>
+                            <td className="px-6 py-4">
+                              {isEditable && !isEditing && (
+                                <div className="flex items-center justify-end space-x-2">
+                                  <button
+                                    onClick={() => { setEditingGroupId(group.id); setEditGroupName(group.name); }}
+                                    className="px-3 py-1.5 text-xs font-medium text-slate-700 bg-slate-50 hover:bg-slate-100 rounded-lg transition-colors"
+                                  >
+                                    Редактировать
+                                  </button>
+                                  <button
+                                    onClick={() => handleSubmitGroup(group.id)}
+                                    disabled={isSubmittingGroup === group.id}
+                                    className="px-3 py-1.5 text-xs font-medium text-white bg-gold-500 hover:bg-gold-600 rounded-lg transition-colors disabled:opacity-50"
+                                  >
+                                    {isSubmittingGroup === group.id ? 'Отправка...' : 'Отправить'}
+                                  </button>
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -419,9 +534,13 @@ const OperatorPage: React.FC = () => {
                       className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-transparent"
                     >
                       <option value={0}>Выберите группу</option>
-                      {approvedGroups.map((g) => (
-                        <option key={g.id} value={g.id}>{g.block ? `${g.block.name} > ${g.name}` : g.name}</option>
-                      ))}
+                      {approvedGroups.map((g) => {
+                        const isDraft = g.approvalStatus && g.approvalStatus !== 'APPROVED';
+                        const label = g.block ? `${g.block.name} > ${g.name}` : g.name;
+                        return (
+                          <option key={g.id} value={g.id}>{isDraft ? `${label} (Проект)` : label}</option>
+                        );
+                      })}
                     </select>
                   </div>
                   <div className="space-y-3">

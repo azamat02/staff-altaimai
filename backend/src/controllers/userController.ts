@@ -4,6 +4,7 @@ import prisma from '../config/database';
 import { AuthRequest } from '../middleware/authMiddleware';
 import { generatePassword, generateLogin } from '../utils/helpers';
 import { sendCredentialsEmail, sendPasswordResetEmail } from '../utils/mailer';
+import { logAudit } from '../utils/auditLog';
 
 // Рекурсивное получение всех подчиненных
 async function getSubordinatesTree(userId: number): Promise<any[]> {
@@ -193,6 +194,7 @@ export const createUser = async (req: AuthRequest, res: Response) => {
         canAccessPlatform,
         login,
         passwordHash,
+        mustChangePassword: canAccessPlatform ? true : false,
         approvalStatus: 'APPROVED',
         createdByAdminId: authReq.adminId || null,
       },
@@ -209,6 +211,14 @@ export const createUser = async (req: AuthRequest, res: Response) => {
         data: { leaderId: user.id },
       });
     }
+
+    await logAudit(req, {
+      action: 'USER_CREATE',
+      targetType: 'User',
+      targetId: user.id,
+      targetName: user.fullName,
+      details: { groupId, position },
+    });
 
     // Отправляем учётные данные на email если есть
     if (plainPassword && login && email) {
@@ -336,6 +346,7 @@ export const updateUser = async (req: Request, res: Response) => {
         email: email !== undefined ? (email || null) : existingUser.email,
         login,
         passwordHash,
+        ...(plainPassword ? { mustChangePassword: true } : {}),
       },
       include: {
         group: true,
@@ -350,6 +361,13 @@ export const updateUser = async (req: Request, res: Response) => {
         data: { leaderId: user.id },
       });
     }
+
+    await logAudit(req as AuthRequest, {
+      action: 'USER_UPDATE',
+      targetType: 'User',
+      targetId: user.id,
+      targetName: user.fullName,
+    });
 
     // Отправляем учётные данные на email если были сгенерированы
     const userEmail = email || existingUser.email;
@@ -403,6 +421,13 @@ export const deleteUser = async (req: Request, res: Response) => {
       where: { id: parseInt(id) },
     });
 
+    await logAudit(req as AuthRequest, {
+      action: 'USER_DELETE',
+      targetType: 'User',
+      targetId: existingUser.id,
+      targetName: existingUser.fullName,
+    });
+
     res.json({ message: 'Пользователь успешно удалён' });
   } catch (error) {
     console.error('Delete user error:', error);
@@ -432,7 +457,14 @@ export const regeneratePassword = async (req: AuthRequest, res: Response) => {
 
     await prisma.user.update({
       where: { id: parseInt(id) },
-      data: { passwordHash },
+      data: { passwordHash, mustChangePassword: true },
+    });
+
+    await logAudit(req, {
+      action: 'USER_PASSWORD_REGENERATE',
+      targetType: 'User',
+      targetId: existingUser.id,
+      targetName: existingUser.fullName,
     });
 
     // Отправляем новый пароль на email если есть

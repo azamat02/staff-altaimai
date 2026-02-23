@@ -19,7 +19,7 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     const url = error.config?.url || '';
-    const isAuthEndpoint = url.includes('/auth/login') || url.includes('/auth/reset-password');
+    const isAuthEndpoint = url.includes('/auth/login') || url.includes('/auth/request-reset-code') || url.includes('/auth/verify-reset-code') || url.includes('/auth/set-new-password');
     if (error.response?.status === 401 && !isAuthEndpoint) {
       localStorage.removeItem('token');
       localStorage.removeItem('role');
@@ -29,7 +29,7 @@ api.interceptors.response.use(
   }
 );
 
-export type ApprovalStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+export type ApprovalStatus = 'DRAFT' | 'PENDING' | 'APPROVED' | 'REJECTED' | 'REVISION';
 
 export interface User {
   id: number;
@@ -48,6 +48,9 @@ export interface User {
   email?: string | null;
   // Логин для входа
   login?: string | null;
+  // Оператор из сотрудника
+  isOperator?: boolean;
+  mustChangePassword?: boolean;
   // Для user portal
   subordinatesTree?: User[];
   // Сгенерированные данные (только при создании/обновлении)
@@ -95,12 +98,26 @@ export interface Admin {
   createdByAdminId?: number | null;
   createdAt: string;
   _count?: { createdKpis: number };
+  source?: 'admin' | 'user';
+  fullName?: string;
+  userId?: number;
+  position?: string;
+  groupName?: string | null;
+  operatorExpiresAt?: string | null;
+}
+
+export interface PromotableUser {
+  id: number;
+  fullName: string;
+  position: string;
+  group: { id: number; name: string };
 }
 
 // Ответ на логин
 export interface LoginResponse {
   token: string;
   role: 'admin' | 'operator' | 'user';
+  mustChangePassword?: boolean;
   admin?: Admin;
   user?: User;
 }
@@ -117,8 +134,14 @@ export const authApi = {
     api.post<LoginResponse>('/auth/login', { username, password }),
   logout: () => api.post('/auth/logout'),
   getMe: () => api.get<MeResponse>('/auth/me'),
-  resetPassword: (email: string) =>
-    api.post<{ message: string }>('/auth/reset-password', { email }),
+  requestResetCode: (email: string) =>
+    api.post<{ message: string }>('/auth/request-reset-code', { email }),
+  verifyResetCode: (email: string, code: string) =>
+    api.post<{ resetToken: string }>('/auth/verify-reset-code', { email, code }),
+  setNewPassword: (resetToken: string, newPassword: string) =>
+    api.post<{ message: string }>('/auth/set-new-password', { resetToken, newPassword }),
+  changePassword: (currentPassword: string, newPassword: string) =>
+    api.post<{ message: string }>('/auth/change-password', { currentPassword, newPassword }),
 };
 
 export interface CreateUserData {
@@ -582,13 +605,17 @@ export const adminsApi = {
   delete: (id: number) => api.delete(`/admins/${id}`),
   regeneratePassword: (id: number) =>
     api.post<{ generatedPassword: string }>(`/admins/${id}/regenerate-password`),
+  getPromotableUsers: () => api.get<PromotableUser[]>('/admins/promotable-users'),
+  promoteUser: (userId: number, role?: 'OPERATOR' | 'ADMIN', expiresAt?: string | null) =>
+    api.post('/admins/promote-user', { userId, role, expiresAt }),
+  demoteUser: (userId: number) => api.post(`/admins/demote-user/${userId}`),
 };
 
 // ==================== Operator API ====================
 
 export interface OperatorDashboard {
   users: { pending: number; approved: number; rejected: number };
-  groups: { pending: number; approved: number; rejected: number };
+  groups: { draft: number; pending: number; approved: number; revision: number };
 }
 
 export interface CreatePendingUserData {
@@ -608,7 +635,9 @@ export const operatorApi = {
   createUser: (data: CreatePendingUserData) => api.post<User>('/operator/users', data),
   getGroups: () => api.get<Group[]>('/operator/groups'),
   createGroup: (name: string) => api.post<Group>('/operator/groups', { name }),
-  getApprovedGroups: () => api.get<{ id: number; name: string; block?: { id: number; name: string } | null }[]>('/operator/approved-groups'),
+  getApprovedGroups: () => api.get<{ id: number; name: string; approvalStatus?: ApprovalStatus; block?: { id: number; name: string } | null }[]>('/operator/approved-groups'),
+  updateGroup: (id: number, name: string) => api.put<Group>(`/operator/groups/${id}`, { name }),
+  submitGroup: (id: number) => api.post<Group>(`/operator/groups/${id}/submit`),
 };
 
 // ==================== Approvals API ====================
@@ -626,6 +655,50 @@ export const approvalsApi = {
   approveGroup: (id: number) => api.post<Group>(`/approvals/groups/${id}/approve`),
   rejectGroup: (id: number, reason?: string) =>
     api.post<Group>(`/approvals/groups/${id}/reject`, { reason }),
+};
+
+// ==================== Audit Log API ====================
+
+export interface AuditLog {
+  id: number;
+  actorType: 'ADMIN' | 'USER';
+  actorId: number;
+  actorName: string;
+  action: string;
+  targetType: string | null;
+  targetId: number | null;
+  targetName: string | null;
+  details: Record<string, unknown> | null;
+  ipAddress: string | null;
+  createdAt: string;
+}
+
+export interface AuditLogPagination {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
+export interface AuditLogResponse {
+  data: AuditLog[];
+  pagination: AuditLogPagination;
+}
+
+export interface AuditLogFilters {
+  page?: number;
+  limit?: number;
+  action?: string;
+  actorId?: number;
+  targetType?: string;
+  targetId?: number;
+  dateFrom?: string;
+  dateTo?: string;
+}
+
+export const auditLogApi = {
+  getAll: (filters?: AuditLogFilters) =>
+    api.get<AuditLogResponse>('/audit-logs', { params: filters }),
 };
 
 export default api;

@@ -3,8 +3,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import prisma from '../config/database';
 import { AuthRequest } from '../middleware/authMiddleware';
-import { generatePassword } from '../utils/helpers';
-import { sendPasswordResetEmail } from '../utils/mailer';
+import { logAudit } from '../utils/auditLog';
 
 // Рекурсивное получение всех подчиненных
 async function getSubordinatesTree(userId: number): Promise<any[]> {
@@ -50,6 +49,14 @@ export const login = async (req: Request, res: Response) => {
           { expiresIn: '24h' }
         );
 
+        await logAudit(req as AuthRequest, {
+          action: 'LOGIN_SUCCESS',
+          targetType: 'Admin',
+          targetId: admin.id,
+          targetName: admin.username,
+          actorOverride: { actorType: 'ADMIN', actorId: admin.id, actorName: admin.username },
+        });
+
         return res.json({
           token,
           role: jwtRole,
@@ -82,8 +89,37 @@ export const login = async (req: Request, res: Response) => {
       const isValidPassword = await bcrypt.compare(password, user.passwordHash);
 
       if (isValidPassword) {
+        // User-admin получает доступ как админ
+        if (user.isAdmin) {
+          const token = jwt.sign(
+            { userId: user.id, role: 'admin', adminRole: 'ADMIN', isAdmin: true },
+            process.env.JWT_SECRET || 'secret',
+            { expiresIn: '24h' }
+          );
+
+          await logAudit(req as AuthRequest, {
+            action: 'LOGIN_SUCCESS',
+            targetType: 'User',
+            targetId: user.id,
+            targetName: user.fullName,
+            actorOverride: { actorType: 'USER', actorId: user.id, actorName: user.fullName },
+          });
+
+          return res.json({
+            token,
+            role: 'admin',
+            admin: {
+              id: user.id,
+              username: user.fullName,
+              email: user.email,
+              role: 'ADMIN',
+              source: 'user',
+            },
+          });
+        }
+
         const token = jwt.sign(
-          { userId: user.id, role: 'user' },
+          { userId: user.id, role: 'user', isOperator: user.isOperator },
           process.env.JWT_SECRET || 'secret',
           { expiresIn: '24h' }
         );
@@ -91,9 +127,18 @@ export const login = async (req: Request, res: Response) => {
         // Получаем дерево подчиненных
         const subordinatesTree = await getSubordinatesTree(user.id);
 
+        await logAudit(req as AuthRequest, {
+          action: 'LOGIN_SUCCESS',
+          targetType: 'User',
+          targetId: user.id,
+          targetName: user.fullName,
+          actorOverride: { actorType: 'USER', actorId: user.id, actorName: user.fullName },
+        });
+
         return res.json({
           token,
           role: 'user',
+          mustChangePassword: user.mustChangePassword,
           user: {
             id: user.id,
             fullName: user.fullName,
@@ -107,11 +152,20 @@ export const login = async (req: Request, res: Response) => {
             submitsBasicReport: user.submitsBasicReport,
             submitsKpi: user.submitsKpi,
             canAccessPlatform: user.canAccessPlatform,
+            isOperator: user.isOperator,
+            mustChangePassword: user.mustChangePassword,
             subordinatesTree,
           },
         });
       }
     }
+
+    // Fire-and-forget: log failed login attempt
+    logAudit(req as AuthRequest, {
+      action: 'LOGIN_FAILURE',
+      details: { attemptedUsername: username },
+      actorOverride: { actorType: 'ADMIN', actorId: 0, actorName: username },
+    });
 
     return res.status(401).json({ error: 'Неверные учётные данные' });
   } catch (error) {
@@ -129,6 +183,34 @@ export const getMe = async (req: AuthRequest, res: Response) => {
   try {
     // Если это админ или оператор
     if (req.adminId) {
+      // Проверяем, не user-admin ли это
+      if (req.userId) {
+        const user = await prisma.user.findUnique({
+          where: { id: req.userId },
+          select: {
+            id: true,
+            fullName: true,
+            email: true,
+            isAdmin: true,
+            createdAt: true,
+          },
+        });
+
+        if (user && user.isAdmin) {
+          return res.json({
+            role: 'admin',
+            admin: {
+              id: user.id,
+              username: user.fullName,
+              email: user.email,
+              role: 'ADMIN',
+              createdAt: user.createdAt,
+              source: 'user',
+            },
+          });
+        }
+      }
+
       const admin = await prisma.admin.findUnique({
         where: { id: req.adminId },
         select: {
@@ -190,6 +272,8 @@ export const getMe = async (req: AuthRequest, res: Response) => {
           submitsBasicReport: user.submitsBasicReport,
           submitsKpi: user.submitsKpi,
           canAccessPlatform: user.canAccessPlatform,
+          isOperator: user.isOperator,
+          mustChangePassword: user.mustChangePassword,
           subordinatesTree,
         },
       });
@@ -202,57 +286,3 @@ export const getMe = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// POST /api/auth/reset-password — Сброс пароля по email
-export const resetPassword = async (req: Request, res: Response) => {
-  try {
-    const { email } = req.body;
-
-    if (!email) {
-      return res.status(400).json({ error: 'Email обязателен' });
-    }
-
-    // Ищем Admin по email
-    const admin = await prisma.admin.findFirst({ where: { email } });
-
-    if (admin) {
-      const newPassword = generatePassword();
-      const passwordHash = await bcrypt.hash(newPassword, 10);
-
-      await prisma.admin.update({
-        where: { id: admin.id },
-        data: { passwordHash },
-      });
-
-      sendPasswordResetEmail(email, admin.username, admin.username, newPassword).catch((err) =>
-        console.error('Failed to send password reset email:', err)
-      );
-
-      return res.json({ message: 'Если указанный email зарегистрирован, на него отправлен новый пароль' });
-    }
-
-    // Ищем User по email
-    const user = await prisma.user.findFirst({
-      where: { email, approvalStatus: 'APPROVED', canAccessPlatform: true },
-    });
-
-    if (user) {
-      const newPassword = generatePassword();
-      const passwordHash = await bcrypt.hash(newPassword, 10);
-
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { passwordHash },
-      });
-
-      sendPasswordResetEmail(email, user.fullName, user.login || email, newPassword).catch((err) =>
-        console.error('Failed to send password reset email:', err)
-      );
-    }
-
-    // Одинаковый ответ независимо от наличия email (защита от перебора)
-    return res.json({ message: 'Если указанный email зарегистрирован, на него отправлен новый пароль' });
-  } catch (error) {
-    console.error('Reset password error:', error);
-    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
-  }
-};

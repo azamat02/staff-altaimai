@@ -12,6 +12,7 @@ import adminRoutes from './routes/adminRoutes';
 import operatorRoutes from './routes/operatorRoutes';
 import approvalRoutes from './routes/approvalRoutes';
 import blockRoutes from './routes/blockRoutes';
+import auditLogRoutes from './routes/auditLogRoutes';
 
 dotenv.config();
 
@@ -35,6 +36,7 @@ app.use('/api/admins', adminRoutes);
 app.use('/api/operator', operatorRoutes);
 app.use('/api/approvals', approvalRoutes);
 app.use('/api/blocks', blockRoutes);
+app.use('/api/audit-logs', auditLogRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });

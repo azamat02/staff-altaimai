@@ -7,8 +7,10 @@ interface AuthContextType {
   role: 'admin' | 'operator' | 'user' | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  mustChangePassword: boolean;
   login: (username: string, password: string) => Promise<'admin' | 'operator' | 'user'>;
   logout: () => void;
+  clearMustChangePassword: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -30,6 +32,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<'admin' | 'operator' | 'user' | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [mustChangePassword, setMustChangePassword] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -44,9 +47,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           if ((r === 'admin' || r === 'operator') && data.admin) {
             setAdmin({ ...data.admin, isSuperAdmin: data.admin.role === 'SUPER_ADMIN' });
             setUser(null);
+            setMustChangePassword(false);
           } else if (r === 'user' && data.user) {
             setUser(data.user);
             setAdmin(null);
+            setMustChangePassword(!!data.user.mustChangePassword);
           }
         })
         .catch(() => {
@@ -73,9 +78,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if ((r === 'admin' || r === 'operator') && data.admin) {
       setAdmin({ ...data.admin, isSuperAdmin: data.admin.role === 'SUPER_ADMIN' });
       setUser(null);
+      setMustChangePassword(false);
     } else if (r === 'user' && data.user) {
       setUser(data.user);
       setAdmin(null);
+      setMustChangePassword(!!data.mustChangePassword);
     }
 
     return r;
@@ -87,6 +94,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setAdmin(null);
     setUser(null);
     setRole(null);
+    setMustChangePassword(false);
+  };
+
+  const clearMustChangePassword = () => {
+    setMustChangePassword(false);
   };
 
   return (
@@ -97,8 +109,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         role,
         isLoading,
         isAuthenticated: !!(admin || user),
+        mustChangePassword,
         login,
         logout,
+        clearMustChangePassword,
       }}
     >
       {children}

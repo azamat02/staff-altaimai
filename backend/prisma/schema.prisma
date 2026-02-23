@@ -14,9 +14,11 @@ enum AdminRole {
 }
 
 enum ApprovalStatus {
+  DRAFT
   PENDING
   APPROVED
   REJECTED
+  REVISION
 }
 
 model Block {
@@ -61,6 +63,17 @@ model User {
   login              String?  @unique          // Логин для входа
   passwordHash       String?                    // Хеш пароля для входа
 
+  // Оператор из сотрудника
+  isOperator              Boolean   @default(false)
+  operatorExpiresAt       DateTime?                    // Срок действия роли оператора (null = бессрочно)
+  operatorCreatedByAdminId Int?
+  operatorCreatedByAdmin   Admin?  @relation("UserOperatorCreator", fields: [operatorCreatedByAdminId], references: [id])
+
+  // Админ из сотрудника
+  isAdmin                 Boolean  @default(false)
+  adminCreatedByAdminId   Int?
+  adminCreatedByAdmin     Admin?   @relation("UserAdminCreator", fields: [adminCreatedByAdminId], references: [id])
+
   // Одобрение
   approvalStatus    ApprovalStatus  @default(APPROVED)
   createdByAdminId  Int?
@@ -74,6 +87,8 @@ model User {
   // KPI
   kpisToApprove  Kpi[]           @relation("KpiApprover")
   kpiAssignments KpiAssignment[]
+
+  mustChangePassword Boolean @default(false)
 
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -93,6 +108,8 @@ model Admin {
   createdKpis      Kpi[]      @relation("KpiCreator")
   createdUsers     User[]     @relation("UserCreator")
   createdGroups    Group[]    @relation("GroupCreator")
+  promotedOperators User[]   @relation("UserOperatorCreator")
+  promotedAdmins    User[]   @relation("UserAdminCreator")
 }
 
 model EvaluationPeriod {
@@ -145,6 +162,59 @@ model GroupScore {
   updatedAt   DateTime         @updatedAt
 
   @@unique([groupId, periodId])
+}
+
+// Audit Log
+enum AuditAction {
+  ADMIN_CREATE
+  ADMIN_DELETE
+  ADMIN_PASSWORD_REGENERATE
+  USER_PROMOTE_TO_OPERATOR
+  USER_DEMOTE_FROM_OPERATOR
+  USER_PROMOTE_TO_ADMIN
+  USER_DEMOTE_FROM_ADMIN
+  OPERATOR_ROLE_EXPIRED
+  USER_APPROVE
+  USER_REJECT
+  GROUP_APPROVE
+  GROUP_REJECT
+  PENDING_USER_CREATE
+  PENDING_GROUP_CREATE
+  GROUP_UPDATE
+  GROUP_SUBMIT_FOR_APPROVAL
+  USER_CREATE
+  USER_UPDATE
+  USER_DELETE
+  USER_PASSWORD_REGENERATE
+  LOGIN_SUCCESS
+  LOGIN_FAILURE
+  PASSWORD_RESET
+  PASSWORD_RESET_CODE_REQUESTED
+  PASSWORD_CHANGED
+}
+
+enum AuditActorType {
+  ADMIN
+  USER
+}
+
+model AuditLog {
+  id          Int             @id @default(autoincrement())
+  actorType   AuditActorType
+  actorId     Int
+  actorName   String
+  action      AuditAction
+  targetType  String?
+  targetId    Int?
+  targetName  String?
+  details     Json?
+  ipAddress   String?
+  createdAt   DateTime        @default(now())
+
+  @@index([action])
+  @@index([actorId, actorType])
+  @@index([targetType, targetId])
+  @@index([createdAt])
 }
 
 // KPI System
@@ -244,4 +314,17 @@ model KpiTaskFact {
   updatedAt     DateTime      @updatedAt
 
   @@unique([taskId, assignmentId])
+}
+
+model PasswordResetCode {
+  id        Int       @id @default(autoincrement())
+  email     String
+  code      String
+  expiresAt DateTime
+  usedAt    DateTime?
+  attempts  Int       @default(0)
+  createdAt DateTime  @default(now())
+
+  @@index([email, code])
+  @@index([expiresAt])
 }

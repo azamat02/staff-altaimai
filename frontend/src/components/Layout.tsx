@@ -1,4 +1,4 @@
-import React, { ReactNode } from 'react';
+import React, { ReactNode, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
@@ -55,16 +55,37 @@ const AdminShieldIcon = () => (
   </svg>
 );
 
+const AuditLogIcon = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+  </svg>
+);
+
 const LogoutIcon = () => (
   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
   </svg>
 );
 
+const MenuIcon = () => (
+  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 6h16M4 12h16M4 18h16" />
+  </svg>
+);
+
+const CloseIcon = () => (
+  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
+  </svg>
+);
+
+const SIDEBAR_WIDTH = 'w-60';
+
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { admin, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -73,96 +94,101 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   const navItems = [
     { path: '/users', label: 'Пользователи', icon: UsersIcon },
-    { path: '/groups', label: 'Группы', icon: GroupIcon },
+    { path: '/groups', label: 'Организационная структура', icon: GroupIcon },
     { path: '/evaluation-periods', label: 'Периоды оценки', icon: CalendarIcon },
     { path: '/group-scores', label: 'Оценки групп', icon: ChartIcon },
     { path: '/scoring-report', label: 'Отчёт', icon: ReportIcon },
     { path: '/kpis', label: 'KPI', icon: KpiIcon },
     { path: '/approvals', label: 'Одобрения', icon: ApprovalIcon },
     { path: '/admins', label: admin?.isSuperAdmin ? 'Админы' : 'Операторы', icon: AdminShieldIcon },
+    ...(admin?.isSuperAdmin ? [{ path: '/audit-log', label: 'Аудит-лог', icon: AuditLogIcon }] : []),
   ];
+
+  const sidebarContent = (
+    <div className="flex flex-col h-full">
+      {/* Logo */}
+      <div className="flex items-center h-16 px-5 flex-shrink-0">
+        <Link to="/users" className="flex items-center" onClick={() => setMobileOpen(false)}>
+          <img src="/logo.webp" alt="Altai Mai" className="h-8" />
+        </Link>
+      </div>
+
+      {/* Nav items */}
+      <nav className="flex-1 overflow-y-auto px-3 py-2 space-y-1">
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          const isActive = location.pathname === item.path;
+          return (
+            <Link
+              key={item.path}
+              to={item.path}
+              onClick={() => setMobileOpen(false)}
+              className={`flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                isActive
+                  ? 'bg-gold-500/20 text-gold-500'
+                  : 'text-white/70 hover:bg-white/10 hover:text-white'
+              }`}
+            >
+              <Icon />
+              <span>{item.label}</span>
+            </Link>
+          );
+        })}
+      </nav>
+
+      {/* User / logout */}
+      <div className="flex-shrink-0 border-t border-white/10 p-4">
+        <div className="flex items-center space-x-3 mb-3">
+          <div className="w-8 h-8 bg-gold-500/20 rounded-full flex items-center justify-center flex-shrink-0">
+            <span className="text-sm font-medium text-gold-500">
+              {admin?.username?.charAt(0).toUpperCase()}
+            </span>
+          </div>
+          <span className="text-sm font-medium text-white/80 truncate">{admin?.username}</span>
+        </div>
+        <button
+          onClick={handleLogout}
+          className="flex items-center space-x-2 w-full px-3 py-2 text-sm font-medium text-white/50 hover:text-gold-500 hover:bg-white/10 rounded-xl transition-colors"
+        >
+          <LogoutIcon />
+          <span>Выход</span>
+        </button>
+      </div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-brand-light">
-      {/* Top Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-40 bg-brand-dark border-b border-brand-darker">
-        <div className="max-w-screen-2xl mx-auto px-6">
-          <div className="flex items-center justify-between h-16">
-            {/* Logo */}
-            <div className="flex items-center space-x-8">
-              <Link to="/users" className="flex items-center">
-                <img src="/logo.webp" alt="Altai Mai" className="h-8" />
-              </Link>
+      {/* Desktop sidebar */}
+      <aside className={`hidden md:flex md:flex-col md:fixed md:inset-y-0 md:left-0 ${SIDEBAR_WIDTH} bg-brand-dark border-r border-brand-darker z-40`}>
+        {sidebarContent}
+      </aside>
 
-              {/* Navigation Links */}
-              <div className="hidden md:flex items-center space-x-1">
-                {navItems.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = location.pathname === item.path;
-                  return (
-                    <Link
-                      key={item.path}
-                      to={item.path}
-                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        isActive
-                          ? 'bg-gold-500/20 text-gold-500'
-                          : 'text-white/70 hover:bg-white/10 hover:text-white'
-                      }`}
-                    >
-                      <Icon />
-                      <span>{item.label}</span>
-                    </Link>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* User Menu */}
-            <div className="flex items-center space-x-4">
-              <div className="hidden sm:flex items-center space-x-3">
-                <div className="w-8 h-8 bg-gold-500/20 rounded-full flex items-center justify-center">
-                  <span className="text-sm font-medium text-gold-500">
-                    {admin?.username?.charAt(0).toUpperCase()}
-                  </span>
-                </div>
-                <span className="text-sm font-medium text-white/80">{admin?.username}</span>
-              </div>
-              <button
-                onClick={handleLogout}
-                className="flex items-center space-x-2 px-3 py-2 text-sm font-medium text-white/50 hover:text-gold-500 hover:bg-white/10 rounded-lg transition-colors"
-              >
-                <LogoutIcon />
-                <span className="hidden sm:inline">Выход</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </nav>
-
-      {/* Mobile Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 bg-brand-dark border-t border-brand-darker md:hidden">
-        <div className="flex items-center justify-around py-2">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = location.pathname === item.path;
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={`flex flex-col items-center space-y-1 px-4 py-2 rounded-lg ${
-                  isActive ? 'text-gold-500' : 'text-white/50'
-                }`}
-              >
-                <Icon />
-                <span className="text-xs font-medium">{item.label}</span>
-              </Link>
-            );
-          })}
-        </div>
+      {/* Mobile top bar */}
+      <div className="md:hidden fixed top-0 left-0 right-0 z-40 bg-brand-dark border-b border-brand-darker h-14 flex items-center justify-between px-4">
+        <Link to="/users" className="flex items-center">
+          <img src="/logo.webp" alt="Altai Mai" className="h-7" />
+        </Link>
+        <button
+          onClick={() => setMobileOpen(!mobileOpen)}
+          className="p-2 text-white/70 hover:text-white rounded-lg transition-colors"
+        >
+          {mobileOpen ? <CloseIcon /> : <MenuIcon />}
+        </button>
       </div>
 
-      {/* Main Content */}
-      <main className="pt-16 pb-20 md:pb-0">
+      {/* Mobile sidebar overlay */}
+      {mobileOpen && (
+        <>
+          <div className="md:hidden fixed inset-0 z-40 bg-black/50 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
+          <aside className="md:hidden fixed inset-y-0 left-0 z-50 w-64 bg-brand-dark border-r border-brand-darker">
+            {sidebarContent}
+          </aside>
+        </>
+      )}
+
+      {/* Main content */}
+      <main className={`md:ml-60 pt-14 md:pt-0`}>
         <div className="max-w-screen-2xl mx-auto px-6 py-8">
           {children}
         </div>

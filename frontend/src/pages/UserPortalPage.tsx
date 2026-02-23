@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { User, Kpi, MyKpiAssignment, kpisApi, KpiStatus } from '../services/api';
+import { User, Kpi, MyKpiAssignment, kpisApi, KpiStatus, authApi } from '../services/api';
 
 type ViewMode = 'hierarchy' | 'groups';
 
@@ -673,10 +673,367 @@ const MyKpisSection: React.FC = () => {
   );
 };
 
+// Personal Cabinet Modal
+type CabinetResetStep = 'idle' | 'code' | 'newPassword' | 'success';
+
+const PersonalCabinetModal: React.FC<{ user: User; onClose: () => void }> = ({ user, onClose }) => {
+  // Change password via current password
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [showCurrentPw, setShowCurrentPw] = useState(false);
+  const [showNewPw, setShowNewPw] = useState(false);
+
+  // Reset via email code
+  const [resetStep, setResetStep] = useState<CabinetResetStep>('idle');
+  const [resetCode, setResetCode] = useState(['', '', '', '', '', '']);
+  const [resetToken, setResetToken] = useState('');
+  const [resetNewPassword, setResetNewPassword] = useState('');
+  const [resetConfirmPassword, setResetConfirmPassword] = useState('');
+  const [resetError, setResetError] = useState<string | null>(null);
+  const [isResetting, setIsResetting] = useState(false);
+  const [showResetPw, setShowResetPw] = useState(false);
+  const codeInputsRef = useRef<(HTMLInputElement | null)[]>([]);
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordError(null);
+    setPasswordSuccess(null);
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setPasswordError('Все поля обязательны');
+      return;
+    }
+    if (newPassword.length < 6) {
+      setPasswordError('Новый пароль должен быть не менее 6 символов');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError('Пароли не совпадают');
+      return;
+    }
+    if (currentPassword === newPassword) {
+      setPasswordError('Новый пароль должен отличаться от текущего');
+      return;
+    }
+
+    try {
+      setIsChangingPassword(true);
+      await authApi.changePassword(currentPassword, newPassword);
+      setPasswordSuccess('Пароль успешно изменён');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (err: any) {
+      setPasswordError(err.response?.data?.error || 'Ошибка смены пароля');
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
+
+  const handleRequestResetCode = async () => {
+    setResetError(null);
+    try {
+      setIsResetting(true);
+      await authApi.requestResetCode(user.email!);
+      setResetStep('code');
+    } catch (err: any) {
+      setResetError(err.response?.data?.error || 'Ошибка отправки кода');
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
+  const handleCodeInput = (index: number, value: string) => {
+    if (!/^\d*$/.test(value)) return;
+    const newCode = [...resetCode];
+    newCode[index] = value.slice(-1);
+    setResetCode(newCode);
+    if (value && index < 5) {
+      codeInputsRef.current[index + 1]?.focus();
+    }
+  };
+
+  const handleCodeKeyDown = (index: number, e: React.KeyboardEvent) => {
+    if (e.key === 'Backspace' && !resetCode[index] && index > 0) {
+      codeInputsRef.current[index - 1]?.focus();
+    }
+  };
+
+  const handleCodePaste = (e: React.ClipboardEvent) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+    if (pasted.length > 0) {
+      const newCode = [...resetCode];
+      for (let i = 0; i < 6; i++) newCode[i] = pasted[i] || '';
+      setResetCode(newCode);
+      codeInputsRef.current[Math.min(pasted.length, 5)]?.focus();
+    }
+  };
+
+  const handleVerifyCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResetError(null);
+    const code = resetCode.join('');
+    if (code.length !== 6) { setResetError('Введите 6-значный код'); return; }
+    try {
+      setIsResetting(true);
+      const response = await authApi.verifyResetCode(user.email!, code);
+      setResetToken(response.data.resetToken);
+      setResetStep('newPassword');
+    } catch (err: any) {
+      setResetError(err.response?.data?.error || 'Неверный код');
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
+  const handleSetResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResetError(null);
+    if (!resetNewPassword) { setResetError('Введите новый пароль'); return; }
+    if (resetNewPassword.length < 6) { setResetError('Пароль должен быть не менее 6 символов'); return; }
+    if (resetNewPassword !== resetConfirmPassword) { setResetError('Пароли не совпадают'); return; }
+    try {
+      setIsResetting(true);
+      await authApi.setNewPassword(resetToken, resetNewPassword);
+      setResetStep('success');
+    } catch (err: any) {
+      setResetError(err.response?.data?.error || 'Ошибка установки пароля');
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
+  const EyeToggle: React.FC<{ show: boolean; toggle: () => void }> = ({ show, toggle }) => (
+    <button type="button" onClick={toggle} className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600">
+      {show ? (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12c1.292 4.338 5.31 7.5 10.066 7.5.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" />
+        </svg>
+      ) : (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+        </svg>
+      )}
+    </button>
+  );
+
+  return (
+    <div className="fixed inset-0 z-50 overflow-y-auto">
+      <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative min-h-screen flex items-center justify-center p-4">
+        <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+          {/* Header */}
+          <div className="sticky top-0 bg-white px-6 py-4 border-b border-slate-200 flex items-center justify-between rounded-t-2xl z-10">
+            <h2 className="text-lg font-semibold text-slate-900">Личный кабинет</h2>
+            <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          <div className="p-6 space-y-6">
+            {/* Profile section */}
+            <div>
+              <h3 className="text-sm font-medium text-slate-500 uppercase tracking-wider mb-3">Профиль</h3>
+              <div className="bg-slate-50 rounded-xl p-4 space-y-3">
+                <div className="flex justify-between">
+                  <span className="text-sm text-slate-500">ФИО</span>
+                  <span className="text-sm font-medium text-slate-900">{user.fullName}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-slate-500">Должность</span>
+                  <span className="text-sm font-medium text-slate-900">{user.position}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-slate-500">Группа</span>
+                  <span className="text-sm font-medium text-slate-900">{user.group?.name}</span>
+                </div>
+                {user.email && (
+                  <div className="flex justify-between">
+                    <span className="text-sm text-slate-500">Email</span>
+                    <span className="text-sm font-medium text-slate-900">{user.email}</span>
+                  </div>
+                )}
+                {user.login && (
+                  <div className="flex justify-between">
+                    <span className="text-sm text-slate-500">Логин</span>
+                    <span className="text-sm font-medium text-slate-900">{user.login}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Change password section */}
+            <div>
+              <h3 className="text-sm font-medium text-slate-500 uppercase tracking-wider mb-3">Смена пароля</h3>
+              <form onSubmit={handleChangePassword} className="space-y-3">
+                {passwordError && (
+                  <div className="p-3 bg-red-50 border border-red-100 rounded-xl">
+                    <p className="text-sm text-red-600">{passwordError}</p>
+                  </div>
+                )}
+                {passwordSuccess && (
+                  <div className="p-3 bg-emerald-50 border border-emerald-100 rounded-xl">
+                    <p className="text-sm text-emerald-700">{passwordSuccess}</p>
+                  </div>
+                )}
+                <div className="relative">
+                  <input
+                    type={showCurrentPw ? 'text' : 'password'}
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    className="w-full px-4 py-2.5 pr-10 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-transparent"
+                    placeholder="Текущий пароль"
+                  />
+                  <EyeToggle show={showCurrentPw} toggle={() => setShowCurrentPw(!showCurrentPw)} />
+                </div>
+                <div className="relative">
+                  <input
+                    type={showNewPw ? 'text' : 'password'}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="w-full px-4 py-2.5 pr-10 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-transparent"
+                    placeholder="Новый пароль (мин. 6 символов)"
+                  />
+                  <EyeToggle show={showNewPw} toggle={() => setShowNewPw(!showNewPw)} />
+                </div>
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-transparent"
+                  placeholder="Подтверждение пароля"
+                />
+                <button
+                  type="submit"
+                  disabled={isChangingPassword}
+                  className="w-full py-2.5 text-sm font-medium text-brand-dark bg-gold-500 rounded-lg hover:bg-gold-400 transition-colors disabled:opacity-50"
+                >
+                  {isChangingPassword ? 'Сохранение...' : 'Сменить пароль'}
+                </button>
+              </form>
+            </div>
+
+            {/* Reset via email section */}
+            {user.email && (
+              <div>
+                <h3 className="text-sm font-medium text-slate-500 uppercase tracking-wider mb-3">Сброс через email</h3>
+
+                {resetStep === 'idle' && (
+                  <div>
+                    {resetError && (
+                      <p className="mb-3 text-sm text-red-600">{resetError}</p>
+                    )}
+                    <button
+                      onClick={handleRequestResetCode}
+                      disabled={isResetting}
+                      className="w-full py-2.5 text-sm font-medium text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors disabled:opacity-50"
+                    >
+                      {isResetting ? 'Отправка...' : `Отправить код на ${user.email}`}
+                    </button>
+                  </div>
+                )}
+
+                {resetStep === 'code' && (
+                  <form onSubmit={handleVerifyCode}>
+                    <p className="text-sm text-slate-500 mb-3">
+                      Код отправлен на <strong>{user.email}</strong>
+                    </p>
+                    <div className="flex justify-center gap-2 mb-3" onPaste={handleCodePaste}>
+                      {resetCode.map((digit, i) => (
+                        <input
+                          key={i}
+                          ref={(el) => { codeInputsRef.current[i] = el; }}
+                          type="text"
+                          inputMode="numeric"
+                          maxLength={1}
+                          value={digit}
+                          onChange={(e) => handleCodeInput(i, e.target.value)}
+                          onKeyDown={(e) => handleCodeKeyDown(i, e)}
+                          className="w-11 h-13 text-center text-lg font-semibold bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-transparent"
+                          autoFocus={i === 0}
+                        />
+                      ))}
+                    </div>
+                    {resetError && <p className="mb-3 text-sm text-red-600 text-center">{resetError}</p>}
+                    <div className="flex gap-3">
+                      <button type="button" onClick={() => { setResetStep('idle'); setResetError(null); setResetCode(['','','','','','']); }}
+                        className="flex-1 py-2.5 text-sm font-medium text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors">
+                        Назад
+                      </button>
+                      <button type="submit" disabled={isResetting || resetCode.join('').length !== 6}
+                        className="flex-1 py-2.5 text-sm font-medium text-brand-dark bg-gold-500 rounded-lg hover:bg-gold-400 transition-colors disabled:opacity-50">
+                        {isResetting ? 'Проверка...' : 'Подтвердить'}
+                      </button>
+                    </div>
+                  </form>
+                )}
+
+                {resetStep === 'newPassword' && (
+                  <form onSubmit={handleSetResetPassword}>
+                    <div className="space-y-3 mb-3">
+                      <div className="relative">
+                        <input
+                          type={showResetPw ? 'text' : 'password'}
+                          value={resetNewPassword}
+                          onChange={(e) => setResetNewPassword(e.target.value)}
+                          className="w-full px-4 py-2.5 pr-10 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-transparent"
+                          placeholder="Новый пароль (мин. 6 символов)"
+                          autoFocus
+                        />
+                        <EyeToggle show={showResetPw} toggle={() => setShowResetPw(!showResetPw)} />
+                      </div>
+                      <input
+                        type="password"
+                        value={resetConfirmPassword}
+                        onChange={(e) => setResetConfirmPassword(e.target.value)}
+                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-transparent"
+                        placeholder="Подтвердите пароль"
+                      />
+                    </div>
+                    {resetError && <p className="mb-3 text-sm text-red-600">{resetError}</p>}
+                    <button type="submit" disabled={isResetting}
+                      className="w-full py-2.5 text-sm font-medium text-brand-dark bg-gold-500 rounded-lg hover:bg-gold-400 transition-colors disabled:opacity-50">
+                      {isResetting ? 'Сохранение...' : 'Сохранить пароль'}
+                    </button>
+                  </form>
+                )}
+
+                {resetStep === 'success' && (
+                  <div className="text-center py-4">
+                    <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                    <p className="text-sm text-slate-700 font-medium">Пароль успешно изменён через email</p>
+                    <button onClick={() => setResetStep('idle')}
+                      className="mt-3 text-sm text-gold-600 hover:text-gold-700">
+                      Готово
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const UserPortalPage: React.FC = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [viewMode, setViewMode] = useState<ViewMode>('hierarchy');
+  const [showCabinet, setShowCabinet] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -717,13 +1074,34 @@ const UserPortalPage: React.FC = () => {
                   <span>Оценка сотрудников</span>
                 </button>
               )}
+              {user.isOperator && (
+                <button
+                  onClick={() => navigate('/operator')}
+                  className="flex items-center space-x-2 px-3 py-2 text-sm font-medium text-white/70 hover:text-gold-500 hover:bg-white/10 rounded-lg transition-colors"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  <span>Панель оператора</span>
+                </button>
+              )}
               <button
-              onClick={handleLogout}
-              className="flex items-center space-x-2 px-3 py-2 text-sm font-medium text-white/50 hover:text-gold-500 hover:bg-white/10 rounded-lg transition-colors"
-            >
-              <LogoutIcon />
-              <span>Выход</span>
-            </button>
+                onClick={() => setShowCabinet(true)}
+                className="flex items-center space-x-2 px-3 py-2 text-sm font-medium text-white/70 hover:text-gold-500 hover:bg-white/10 rounded-lg transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                </svg>
+                <span>Личный кабинет</span>
+              </button>
+              <button
+                onClick={handleLogout}
+                className="flex items-center space-x-2 px-3 py-2 text-sm font-medium text-white/50 hover:text-gold-500 hover:bg-white/10 rounded-lg transition-colors"
+              >
+                <LogoutIcon />
+                <span>Выход</span>
+              </button>
             </div>
           </div>
         </div>
@@ -840,6 +1218,11 @@ const UserPortalPage: React.FC = () => {
           </div>
         </div>
       </main>
+
+      {/* Personal Cabinet Modal */}
+      {showCabinet && user && (
+        <PersonalCabinetModal user={user} onClose={() => setShowCabinet(false)} />
+      )}
     </div>
   );
 };

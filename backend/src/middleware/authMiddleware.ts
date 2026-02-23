@@ -1,11 +1,13 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import prisma from '../config/database';
 
 export interface AuthRequest extends Request {
   adminId?: number;
   userId?: number;
   role?: 'admin' | 'operator' | 'user';
   adminRole?: 'SUPER_ADMIN' | 'ADMIN' | 'OPERATOR';
+  isOperator?: boolean;
 }
 
 interface JwtPayload {
@@ -13,6 +15,8 @@ interface JwtPayload {
   userId?: number;
   role: 'admin' | 'operator' | 'user';
   adminRole?: 'SUPER_ADMIN' | 'ADMIN' | 'OPERATOR';
+  isOperator?: boolean;
+  isAdmin?: boolean;
 }
 
 export const authMiddleware = (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -36,9 +40,16 @@ export const authMiddleware = (req: AuthRequest, res: Response, next: NextFuncti
       } else {
         req.role = 'admin';
       }
+    } else if (decoded.userId && decoded.isAdmin) {
+      // User-admin: получает доступ как админ
+      req.adminId = decoded.userId;
+      req.adminRole = 'ADMIN';
+      req.role = 'admin';
+      req.userId = decoded.userId;
     } else if (decoded.userId) {
       req.userId = decoded.userId;
       req.role = 'user';
+      req.isOperator = decoded.isOperator || false;
     }
 
     next();
@@ -77,6 +88,36 @@ export const adminOrOperator = (req: AuthRequest, res: Response, next: NextFunct
     return res.status(403).json({ error: 'Доступ запрещён: требуются права администратора или оператора' });
   }
   next();
+};
+
+// Middleware для операторов (Admin-OPERATOR) или User-операторов (isOperator=true)
+// Проверяет истечение срока действия роли оператора для user-операторов
+export const operatorOrUserOperator = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  if (req.role === 'operator') {
+    return next();
+  }
+
+  if (req.role === 'user' && req.isOperator && req.userId) {
+    // Проверяем в БД: не истёк ли срок
+    const user = await prisma.user.findUnique({
+      where: { id: req.userId },
+      select: { isOperator: true, operatorExpiresAt: true },
+    });
+
+    if (user?.isOperator) {
+      if (!user.operatorExpiresAt || user.operatorExpiresAt > new Date()) {
+        return next();
+      }
+      // Срок истёк — автоматически снимаем роль
+      await prisma.user.update({
+        where: { id: req.userId },
+        data: { isOperator: false, operatorCreatedByAdminId: null, operatorExpiresAt: null },
+      });
+      return res.status(403).json({ error: 'Срок действия роли оператора истёк' });
+    }
+  }
+
+  return res.status(403).json({ error: 'Доступ запрещён' });
 };
 
 // Middleware для аутентифицированных пользователей (admin, operator или user)

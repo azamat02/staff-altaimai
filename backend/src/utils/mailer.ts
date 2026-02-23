@@ -118,6 +118,41 @@ export async function sendCredentialsEmail(
   });
 }
 
+export async function sendResetCodeEmail(
+  to: string,
+  fullName: string,
+  code: string,
+): Promise<void> {
+  const content = `
+    <h2 style="margin: 0 0 8px; color: #0f172a; font-size: 22px; font-weight: 600;">
+      Код сброса пароля
+    </h2>
+    <p style="margin: 0 0 24px; color: #64748b; font-size: 15px; line-height: 1.5;">
+      Здравствуйте, <strong style="color: #0f172a;">${fullName}</strong>! Вы запросили сброс пароля. Используйте код ниже:
+    </p>
+
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 24px;">
+      <tr>
+        <td align="center">
+          <div style="display: inline-block; background: linear-gradient(135deg, #d4a017 0%, #b8860b 100%); padding: 20px 40px; border-radius: 12px; box-shadow: 0 4px 12px rgba(212, 160, 23, 0.3);">
+            <span style="font-size: 36px; font-weight: 700; letter-spacing: 8px; color: #0f172a; font-family: 'Courier New', monospace;">${code}</span>
+          </div>
+        </td>
+      </tr>
+    </table>
+
+    <p style="margin: 0; color: #94a3b8; font-size: 13px; text-align: center;">
+      Код действителен 10 минут. Если вы не запрашивали сброс пароля, проигнорируйте это письмо.
+    </p>`;
+
+  await transporter.sendMail({
+    from: `"Staff Altaimai" <${FROM}>`,
+    to,
+    subject: 'Код сброса пароля — Staff Altaimai',
+    html: emailLayout(content),
+  });
+}
+
 export async function sendPasswordResetEmail(
   to: string,
   fullName: string,
