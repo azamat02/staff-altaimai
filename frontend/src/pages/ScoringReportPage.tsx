@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Layout from '../components/Layout';
+import KpiReport from '../components/KpiReport';
 import {
   groupScoresApi,
   evaluationPeriodsApi,
@@ -106,7 +107,10 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, icon, subtitle, color
   );
 };
 
+type ReportTab = 'scoring' | 'kpi';
+
 const ScoringReportPage: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<ReportTab>('scoring');
   const [periods, setPeriods] = useState<EvaluationPeriod[]>([]);
   const [selectedPeriodId, setSelectedPeriodId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -322,41 +326,78 @@ const ScoringReportPage: React.FC = () => {
     <Layout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900">Сводный отчёт по скорингу</h1>
-            <p className="text-slate-500 mt-1">Статистика и аналитика по оценкам сотрудников</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <select
-              value={selectedPeriodId || ''}
-              onChange={(e) => setSelectedPeriodId(e.target.value ? parseInt(e.target.value) : null)}
-              className="input w-48"
-            >
-              {periods.map((period) => (
-                <option key={period.id} value={period.id}>
-                  {period.name} {period.isActive && '(активен)'}
-                </option>
-              ))}
-            </select>
-            <button
-              onClick={handleExportExcel}
-              disabled={isLoading || !currentPeriod}
-              className="btn-secondary flex items-center gap-2"
-            >
-              <DownloadIcon />
-              <span>Excel</span>
-            </button>
-            <button
-              onClick={handleExportPdf}
-              disabled={isLoading || !currentPeriod}
-              className="btn-secondary flex items-center gap-2"
-            >
-              <DownloadIcon />
-              <span>PDF</span>
-            </button>
-          </div>
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Отчёт</h1>
+          <p className="text-slate-500 mt-1">Аналитика и отчётность по оценкам и KPI</p>
         </div>
+
+        {/* Tabs */}
+        <div className="border-b border-slate-200">
+          <nav className="-mb-px flex space-x-8">
+            <button
+              onClick={() => setActiveTab('scoring')}
+              className={`pb-3 px-1 border-b-2 text-sm font-medium transition-colors ${
+                activeTab === 'scoring'
+                  ? 'border-gold-500 text-gold-600'
+                  : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+              }`}
+            >
+              Скоринг
+            </button>
+            <button
+              onClick={() => setActiveTab('kpi')}
+              className={`pb-3 px-1 border-b-2 text-sm font-medium transition-colors ${
+                activeTab === 'kpi'
+                  ? 'border-gold-500 text-gold-600'
+                  : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+              }`}
+            >
+              KPI
+            </button>
+          </nav>
+        </div>
+
+        {/* KPI Tab */}
+        {activeTab === 'kpi' && <KpiReport />}
+
+        {/* Scoring Tab */}
+        {activeTab === 'scoring' && (
+          <>
+            {/* Scoring header controls */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-semibold text-slate-900">Сводный отчёт по скорингу</h2>
+              </div>
+              <div className="flex items-center gap-3">
+                <select
+                  value={selectedPeriodId || ''}
+                  onChange={(e) => setSelectedPeriodId(e.target.value ? parseInt(e.target.value) : null)}
+                  className="input w-48"
+                >
+                  {periods.map((period) => (
+                    <option key={period.id} value={period.id}>
+                      {period.name} {period.isActive && '(активен)'}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  onClick={handleExportExcel}
+                  disabled={isLoading || !currentPeriod}
+                  className="btn-secondary flex items-center gap-2"
+                >
+                  <DownloadIcon />
+                  <span>Excel</span>
+                </button>
+                <button
+                  onClick={handleExportPdf}
+                  disabled={isLoading || !currentPeriod}
+                  className="btn-secondary flex items-center gap-2"
+                >
+                  <DownloadIcon />
+                  <span>PDF</span>
+                </button>
+              </div>
+            </div>
 
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
@@ -538,6 +579,8 @@ const ScoringReportPage: React.FC = () => {
                 </table>
               </div>
             </div>
+          </>
+        )}
           </>
         )}
       </div>
